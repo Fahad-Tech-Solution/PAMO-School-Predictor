@@ -68,26 +68,6 @@ function filtersFromProps(props: {
   };
 }
 
-/**
- * Remount key so URL/server param changes (incl. back/forward) reset draft
- * without a props→setState sync effect.
- */
-export function applicationFiltersKey(props: {
-  schoolId: string;
-  status: string;
-  attempt: string;
-  homeStates: string[];
-  residency: string;
-}): string {
-  return [
-    props.schoolId,
-    props.status,
-    props.attempt,
-    props.homeStates.join(","),
-    props.residency,
-  ].join("|");
-}
-
 export function ApplicationFilters({
   schoolId,
   schoolLabel,
