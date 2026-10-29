@@ -1,7 +1,10 @@
 import Link from "next/link";
 import { Suspense } from "react";
 
-import { ApplicationFilters } from "@/components/applications/application-filters";
+import {
+  ApplicationFilters,
+  applicationFiltersKey,
+} from "@/components/applications/application-filters";
 import { ApplicationPagination } from "@/components/applications/application-pagination";
 import { RememberApplicationsReturn } from "@/components/applications/remember-applications-return";
 import { buttonVariants } from "@/components/ui/button";
@@ -110,6 +113,13 @@ export default async function ApplicationsPage({
 
       <Suspense fallback={<div className="h-36 rounded-lg border bg-muted/30" />}>
         <ApplicationFilters
+          key={applicationFiltersKey({
+            schoolId,
+            status,
+            attempt,
+            homeStates,
+            residency,
+          })}
           schoolId={schoolId}
           schoolLabel={null}
           status={status}

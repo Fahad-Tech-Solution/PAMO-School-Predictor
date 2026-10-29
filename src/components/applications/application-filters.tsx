@@ -52,6 +52,42 @@ function sameFilters(a: FiltersState, b: FiltersState): boolean {
   );
 }
 
+function filtersFromProps(props: {
+  schoolId: string;
+  status: string;
+  attempt: string;
+  homeStates: string[];
+  residency: string;
+}): FiltersState {
+  return {
+    schoolId: props.schoolId,
+    status: props.status,
+    attempt: props.attempt,
+    homeStates: props.homeStates,
+    residency: props.residency,
+  };
+}
+
+/**
+ * Remount key so URL/server param changes (incl. back/forward) reset draft
+ * without a props→setState sync effect.
+ */
+export function applicationFiltersKey(props: {
+  schoolId: string;
+  status: string;
+  attempt: string;
+  homeStates: string[];
+  residency: string;
+}): string {
+  return [
+    props.schoolId,
+    props.status,
+    props.attempt,
+    props.homeStates.join(","),
+    props.residency,
+  ].join("|");
+}
+
 export function ApplicationFilters({
   schoolId,
   schoolLabel,
@@ -69,22 +105,16 @@ export function ApplicationFilters({
 }) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
-  const committed = useRef<FiltersState>({
+  const initial = filtersFromProps({
     schoolId,
     status,
     attempt,
     homeStates,
     residency,
   });
-
-  const [draft, setDraft] = useState<FiltersState>(committed.current);
-
-  // Keep draft in sync when the server re-renders with new URL params.
-  useEffect(() => {
-    const next = { schoolId, status, attempt, homeStates, residency };
-    committed.current = next;
-    setDraft(next);
-  }, [schoolId, status, attempt, homeStates, residency]);
+  const [draft, setDraft] = useState<FiltersState>(initial);
+  // Last filters we navigated to (or started from). Not read during render.
+  const committed = useRef<FiltersState>(initial);
 
   // Debounced auto-apply: one list query after the user stops changing filters.
   useEffect(() => {

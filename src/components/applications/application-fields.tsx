@@ -2,7 +2,7 @@
 
 import { Tick02Icon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
-import { useEffect, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
 import {
   useFormContext,
   useWatch,
@@ -429,17 +429,30 @@ function StatusField<T extends FieldValues>({
   );
 }
 
+const EMPTY_SCHOOL_IDS: string[] = [];
+const EMPTY_LABELS: Record<string, string> = {};
+
 function PerSchoolStatusAttemptFields<T extends FieldValues>({
   control,
 }: {
   control: Control<T>;
 }) {
   const { setValue, getValues } = useFormContext<T>();
-  const schoolIds =
-    (useWatch({ control, name: "schoolIds" as Path<T> }) as
-      | string[]
-      | undefined) ?? [];
-  const [labels, setLabels] = useState<Record<string, string>>({});
+  const watchedSchoolIds = useWatch({
+    control,
+    name: "schoolIds" as Path<T>,
+  }) as string[] | undefined;
+  // Stabilize dependency: avoid a fresh `[]` every render when watch is undefined.
+  const schoolIdsKey = watchedSchoolIds?.join("\0") ?? "";
+  const schoolIds = useMemo(
+    () => (schoolIdsKey.length > 0 ? schoolIdsKey.split("\0") : EMPTY_SCHOOL_IDS),
+    [schoolIdsKey],
+  );
+  const [fetchedLabels, setFetchedLabels] = useState<Record<string, string>>(
+    EMPTY_LABELS,
+  );
+  // Derive empty labels during render — no setState-in-effect to clear.
+  const labels = schoolIds.length === 0 ? EMPTY_LABELS : fetchedLabels;
 
   // Safety net if schoolIds change outside MultiSchoolField onChange.
   useEffect(() => {
@@ -460,10 +473,7 @@ function PerSchoolStatusAttemptFields<T extends FieldValues>({
   }, [schoolIds, getValues, setValue]);
 
   useEffect(() => {
-    if (schoolIds.length === 0) {
-      setLabels({});
-      return;
-    }
+    if (schoolIds.length === 0) return;
 
     let cancelled = false;
     void getSchoolsByIdsAction(schoolIds).then((rows) => {
@@ -472,7 +482,7 @@ function PerSchoolStatusAttemptFields<T extends FieldValues>({
       for (const row of rows) {
         next[row.id] = `${row.name} (${row.state})`;
       }
-      setLabels(next);
+      setFetchedLabels(next);
     });
 
     return () => {

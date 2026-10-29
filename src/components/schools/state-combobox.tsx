@@ -2,7 +2,14 @@
 
 import { ArrowDown01Icon, Cancel01Icon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
-import { useEffect, useId, useMemo, useRef, useState } from "react";
+import {
+  useEffect,
+  useId,
+  useMemo,
+  useRef,
+  useState,
+  type KeyboardEvent,
+} from "react";
 
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
@@ -47,8 +54,10 @@ export function StateCombobox(props: StateComboboxProps) {
 
   const listId = useId();
   const rootRef = useRef<HTMLDivElement>(null);
+  const optionRefs = useRef<Array<HTMLButtonElement | null>>([]);
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
+  const [highlight, setHighlight] = useState(0);
 
   const [internalSingle, setInternalSingle] = useState(
     !multiple ? (props.defaultValue ?? "") : "",
@@ -73,6 +82,11 @@ export function StateCombobox(props: StateComboboxProps) {
   const options = useMemo(() => filterStates(query), [query]);
 
   useEffect(() => {
+    if (!open || options.length === 0) return;
+    optionRefs.current[highlight]?.scrollIntoView({ block: "nearest" });
+  }, [highlight, open, options.length]);
+
+  useEffect(() => {
     if (!open) return;
 
     const onPointerDown = (event: PointerEvent) => {
@@ -82,7 +96,7 @@ export function StateCombobox(props: StateComboboxProps) {
         setQuery("");
       }
     };
-    const onKeyDown = (event: KeyboardEvent) => {
+    const onDocKeyDown = (event: globalThis.KeyboardEvent) => {
       if (event.key === "Escape") {
         setOpen(false);
         setQuery("");
@@ -91,10 +105,10 @@ export function StateCombobox(props: StateComboboxProps) {
 
     // Capture phase so outside clicks close even if children stop bubbling.
     document.addEventListener("pointerdown", onPointerDown, true);
-    document.addEventListener("keydown", onKeyDown);
+    document.addEventListener("keydown", onDocKeyDown);
     return () => {
       document.removeEventListener("pointerdown", onPointerDown, true);
-      document.removeEventListener("keydown", onKeyDown);
+      document.removeEventListener("keydown", onDocKeyDown);
     };
   }, [open]);
 
@@ -129,6 +143,26 @@ export function StateCombobox(props: StateComboboxProps) {
     }
     setInternalSingle("");
     props.onChange?.("");
+  }
+
+  function onSearchKeyDown(event: KeyboardEvent<HTMLInputElement>) {
+    if (!open || options.length === 0) return;
+
+    if (event.key === "ArrowDown") {
+      event.preventDefault();
+      setHighlight((index) => Math.min(index + 1, options.length - 1));
+      return;
+    }
+    if (event.key === "ArrowUp") {
+      event.preventDefault();
+      setHighlight((index) => Math.max(index - 1, 0));
+      return;
+    }
+    if (event.key === "Enter") {
+      event.preventDefault();
+      const option = options[highlight] ?? options[0];
+      if (option) toggle(option.code);
+    }
   }
 
   return (
@@ -211,10 +245,23 @@ export function StateCombobox(props: StateComboboxProps) {
         >
           <Input
             value={query}
-            onChange={(e) => setQuery(e.target.value)}
+            onChange={(e) => {
+              setQuery(e.target.value);
+              setHighlight(0);
+            }}
+            onKeyDown={onSearchKeyDown}
             placeholder="Type to search…"
             className="mb-2"
             autoFocus
+            role="combobox"
+            aria-autocomplete="list"
+            aria-controls={listId}
+            aria-expanded={open}
+            aria-activedescendant={
+              options[highlight]
+                ? `${listId}-opt-${options[highlight]!.code}`
+                : undefined
+            }
           />
           <div className="max-h-56 overflow-y-auto">
             {options.length === 0 ? (
@@ -222,18 +269,25 @@ export function StateCombobox(props: StateComboboxProps) {
                 No states found.
               </p>
             ) : (
-              options.map((state) => {
+              options.map((state, index) => {
                 const isSelected = selectedCodes.includes(state.code);
+                const isActive = index === highlight;
                 return (
                   <button
                     key={state.code}
+                    id={`${listId}-opt-${state.code}`}
+                    ref={(node) => {
+                      optionRefs.current[index] = node;
+                    }}
                     type="button"
                     role="option"
                     aria-selected={isSelected}
                     className={cn(
                       "flex w-full items-center justify-between rounded-md px-2 py-1.5 text-left text-sm hover:bg-muted",
                       isSelected && "bg-muted font-medium",
+                      isActive && "bg-muted ring-1 ring-ring",
                     )}
+                    onMouseEnter={() => setHighlight(index)}
                     onClick={() => toggle(state.code)}
                   >
                     <span>

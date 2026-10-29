@@ -13,6 +13,7 @@ import {
   useRef,
   useState,
   useTransition,
+  type KeyboardEvent,
 } from "react";
 
 import {
@@ -119,8 +120,10 @@ export function SchoolSelector(props: SchoolSelectorProps) {
 
   const listId = useId();
   const rootRef = useRef<HTMLDivElement>(null);
+  const optionRefs = useRef<Array<HTMLButtonElement | null>>([]);
   const [query, setQuery] = useState("");
   const [open, setOpen] = useState(false);
+  const [highlight, setHighlight] = useState(0);
   const [catalog, setCatalog] = useState<SchoolSearchRow[] | null>(null);
   const [loadError, setLoadError] = useState(false);
   const [pending, startTransition] = useTransition();
@@ -153,6 +156,11 @@ export function SchoolSelector(props: SchoolSelectorProps) {
     () => (catalog ? filterSchools(catalog, query) : []),
     [catalog, query],
   );
+
+  useEffect(() => {
+    if (!open || options.length === 0) return;
+    optionRefs.current[highlight]?.scrollIntoView({ block: "nearest" });
+  }, [highlight, open, options.length]);
 
   function ensureCatalogLoaded() {
     if (catalog) return;
@@ -195,37 +203,41 @@ export function SchoolSelector(props: SchoolSelectorProps) {
     };
   }, [includeInactive]);
 
-  // Resolve labels for pre-selected ids (including inactive historical schools).
+  const selectedIdsKey = selectedIds.join("|");
+
+  // Merge catalog rows for selected ids during render (no sync setState in effect).
+  const resolvedMeta = useMemo(() => {
+    if (!catalog || selectedIds.length === 0) return selectedMeta;
+    let changed = false;
+    const next = { ...selectedMeta };
+    for (const id of selectedIds) {
+      if (next[id]) continue;
+      const row = catalog.find((school) => school.id === id);
+      if (row) {
+        next[id] = row;
+        changed = true;
+      }
+    }
+    return changed ? next : selectedMeta;
+  }, [catalog, selectedIds, selectedIdsKey, selectedMeta]);
+
+  const displaySingleLabel =
+    singleLabel ??
+    (!multiple && selectedSingle && resolvedMeta[selectedSingle]
+      ? schoolLabel(resolvedMeta[selectedSingle]!)
+      : null);
+
+  // Fetch labels only for selected ids still missing from catalog + local meta.
   useEffect(() => {
     if (selectedIds.length === 0) return;
-    const missing = selectedIds.filter((id) => !selectedMeta[id]);
-    if (missing.length === 0) return;
-
-    // Prefer labels from the local catalog when available.
-    if (catalog) {
-      const fromCatalog: Record<string, SchoolSearchRow> = {};
-      let foundAll = true;
-      for (const id of missing) {
-        const row = catalog.find((school) => school.id === id);
-        if (row) fromCatalog[id] = row;
-        else foundAll = false;
-      }
-      if (Object.keys(fromCatalog).length > 0) {
-        setSelectedMeta((prev) => ({ ...prev, ...fromCatalog }));
-        if (!multiple && fromCatalog[missing[0]!] && !singleLabel) {
-          setSingleLabel(schoolLabel(fromCatalog[missing[0]!]!));
-        }
-      }
-      if (foundAll) return;
-    }
-
-    let cancelled = false;
-    const stillMissing = catalog
-      ? missing.filter((id) => !catalog.some((school) => school.id === id))
-      : missing;
-
+    const stillMissing = selectedIds.filter((id) => {
+      if (selectedMeta[id]) return false;
+      if (catalog?.some((school) => school.id === id)) return false;
+      return true;
+    });
     if (stillMissing.length === 0) return;
 
+    let cancelled = false;
     void getSchoolsByIdsAction(stillMissing).then((rows) => {
       if (cancelled) return;
       setSelectedMeta((prev) => {
@@ -242,7 +254,7 @@ export function SchoolSelector(props: SchoolSelectorProps) {
       cancelled = true;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps -- resolve when selection ids change
-  }, [selectedIds.join("|"), catalog]);
+  }, [selectedIdsKey, catalog]);
 
   useEffect(() => {
     if (!open) return;
@@ -253,17 +265,17 @@ export function SchoolSelector(props: SchoolSelectorProps) {
         setQuery("");
       }
     };
-    const onKeyDown = (event: KeyboardEvent) => {
+    const onDocKeyDown = (event: globalThis.KeyboardEvent) => {
       if (event.key === "Escape") {
         setOpen(false);
         setQuery("");
       }
     };
     document.addEventListener("pointerdown", onPointerDown, true);
-    document.addEventListener("keydown", onKeyDown);
+    document.addEventListener("keydown", onDocKeyDown);
     return () => {
       document.removeEventListener("pointerdown", onPointerDown, true);
-      document.removeEventListener("keydown", onKeyDown);
+      document.removeEventListener("keydown", onDocKeyDown);
     };
   }, [open]);
 
@@ -300,8 +312,34 @@ export function SchoolSelector(props: SchoolSelectorProps) {
     props.onChange?.(null);
   }
 
+  function onSearchKeyDown(event: KeyboardEvent<HTMLInputElement>) {
+    if (event.key === "ArrowDown") {
+      event.preventDefault();
+      if (!open) {
+        setOpen(true);
+        ensureCatalogLoaded();
+        return;
+      }
+      if (options.length === 0) return;
+      setHighlight((index) => Math.min(index + 1, options.length - 1));
+      return;
+    }
+    if (event.key === "ArrowUp") {
+      if (!open || options.length === 0) return;
+      event.preventDefault();
+      setHighlight((index) => Math.max(index - 1, 0));
+      return;
+    }
+    if (event.key === "Enter") {
+      if (!open || options.length === 0) return;
+      event.preventDefault();
+      const option = options[highlight] ?? options[0];
+      if (option) toggle(option);
+    }
+  }
+
   const selectedSchools = selectedIds
-    .map((id) => selectedMeta[id])
+    .map((id) => resolvedMeta[id])
     .filter(Boolean) as SchoolSearchRow[];
 
   return (
@@ -338,11 +376,19 @@ export function SchoolSelector(props: SchoolSelectorProps) {
           }}
           onChange={(e) => {
             setQuery(e.target.value);
+            setHighlight(0);
             setOpen(true);
             ensureCatalogLoaded();
           }}
+          onKeyDown={onSearchKeyDown}
           aria-controls={listId}
           aria-expanded={open}
+          aria-autocomplete="list"
+          aria-activedescendant={
+            open && options[highlight]
+              ? `${listId}-opt-${options[highlight]!.id}`
+              : undefined
+          }
           role="combobox"
         />
 
@@ -366,18 +412,25 @@ export function SchoolSelector(props: SchoolSelectorProps) {
                 No schools found.
               </p>
             ) : (
-              options.map((school) => {
+              options.map((school, index) => {
                 const isSelected = selectedIds.includes(school.id);
+                const isActive = index === highlight;
                 return (
                   <button
                     key={school.id}
+                    id={`${listId}-opt-${school.id}`}
+                    ref={(node) => {
+                      optionRefs.current[index] = node;
+                    }}
                     type="button"
                     role="option"
                     aria-selected={isSelected}
                     className={cn(
                       "flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left hover:bg-muted",
                       isSelected && "bg-secondary/20",
+                      isActive && "bg-muted ring-1 ring-ring",
                     )}
+                    onMouseEnter={() => setHighlight(index)}
                     onClick={() => toggle(school)}
                   >
                     <span className="min-w-0 flex-1">
@@ -449,7 +502,7 @@ export function SchoolSelector(props: SchoolSelectorProps) {
         </div>
       ) : null}
 
-      {!multiple && selectedSingle && (singleLabel || selectedMeta[selectedSingle]) ? (
+      {!multiple && selectedSingle && (displaySingleLabel || resolvedMeta[selectedSingle]) ? (
         <div className="flex items-center gap-2 rounded-md border border-secondary bg-secondary px-3 py-2 text-sm text-secondary-foreground">
           <HugeiconsIcon
             icon={Tick02Icon}
@@ -458,10 +511,7 @@ export function SchoolSelector(props: SchoolSelectorProps) {
             className="shrink-0"
           />
           <span className="min-w-0 flex-1 truncate font-medium">
-            {singleLabel ??
-              (selectedMeta[selectedSingle]
-                ? schoolLabel(selectedMeta[selectedSingle]!)
-                : selectedSingle)}
+            {displaySingleLabel ?? selectedSingle}
           </span>
           <Button
             type="button"
