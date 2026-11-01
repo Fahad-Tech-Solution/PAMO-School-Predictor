@@ -69,6 +69,30 @@ export function buildPceBins(): NumericBin[] {
 
 export const PCE_BINS = buildPceBins();
 
+/** Combined Verbal+Quant GRE total range. */
+export const GRE_MIN = 270;
+export const GRE_MAX = 330;
+/** Fixed GRE step on the chart x-axis (e.g. 270–275, 275–280). */
+export const GRE_STEP = 5;
+
+/** GRE score ranges in uniform 5-point bands from 270 through 330. */
+export function buildGreBins(): NumericBin[] {
+  const bins: NumericBin[] = [];
+  for (let min = GRE_MIN; min < GRE_MAX; min += GRE_STEP) {
+    const max = min + GRE_STEP;
+    const isLast = max >= GRE_MAX;
+    bins.push({
+      label: `${min}–${max}`,
+      min,
+      max: isLast ? GRE_MAX : max,
+      inclusiveMax: isLast,
+    });
+  }
+  return bins;
+}
+
+export const GRE_BINS = buildGreBins();
+
 export function valueInBin(value: number, bin: NumericBin): boolean {
   if (value < bin.min) return false;
   if (bin.inclusiveMax) return value <= bin.max;

@@ -3,11 +3,13 @@ import { describe, expect, it } from "vitest";
 import {
   attemptBucketLabel,
   buildGpaBins,
+  buildGreBins,
   countAttempts,
   countIntoBins,
   countOutcomes,
   countResidency,
   GPA_BINS,
+  GRE_BINS,
   outcomeLabelFromStatus,
   PCE_BINS,
   valueInBin,
@@ -62,6 +64,31 @@ describe("GPA labels", () => {
   it("labels bins with two decimal places (hundredths)", () => {
     expect(GPA_BINS[0]?.label).toBe("2.70–2.80");
     expect(GPA_BINS.at(-1)?.label).toBe("3.90–4.00");
+  });
+});
+
+describe("GRE bins", () => {
+  it("builds contiguous 5-point bins from 270 to 330", () => {
+    const bins = buildGreBins();
+    expect(bins[0]).toMatchObject({
+      label: "270–275",
+      min: 270,
+      max: 275,
+      inclusiveMax: false,
+    });
+    expect(bins.at(-1)).toMatchObject({
+      label: "325–330",
+      min: 325,
+      max: 330,
+      inclusiveMax: true,
+    });
+    expect(valueInBin(330, bins.at(-1)!)).toBe(true);
+    expect(countIntoBins([270, 302, 330], GRE_BINS).reduce((s, r) => s + r.count, 0)).toBe(
+      3,
+    );
+    expect(
+      countIntoBins([302], GRE_BINS).find((b) => b.label === "300–305")?.count,
+    ).toBe(1);
   });
 });
 

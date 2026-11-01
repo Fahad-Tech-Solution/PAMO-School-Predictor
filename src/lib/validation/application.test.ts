@@ -16,6 +16,7 @@ describe("applicationFieldsSchema", () => {
       overallGpa: "",
       scienceGpa: "",
       pceHours: "1000",
+      greScore: "",
       applicationAttempt: "1",
       status: "UNKNOWN",
     });
@@ -32,13 +33,41 @@ describe("applicationFieldsSchema", () => {
       overallGpa: "3.8",
       scienceGpa: "",
       pceHours: "",
+      greScore: "310",
       applicationAttempt: 2,
       status: "WAITLISTED",
     });
     expect(result.success).toBe(true);
     if (result.success) {
       expect(result.data.status).toBe("WAITLISTED");
+      expect(result.data.greScore).toBe(310);
     }
+  });
+
+  it("rejects GRE scores outside 270–330", () => {
+    const low = applicationFieldsSchema.safeParse({
+      schoolId,
+      bcpGpa: "",
+      overallGpa: "",
+      scienceGpa: "",
+      pceHours: "",
+      greScore: "269",
+      applicationAttempt: 1,
+      status: "UNKNOWN",
+    });
+    expect(low.success).toBe(false);
+
+    const high = applicationFieldsSchema.safeParse({
+      schoolId,
+      bcpGpa: "",
+      overallGpa: "",
+      scienceGpa: "",
+      pceHours: "",
+      greScore: "331",
+      applicationAttempt: 1,
+      status: "UNKNOWN",
+    });
+    expect(high.success).toBe(false);
   });
 });
 
@@ -58,6 +87,7 @@ describe("createApplicationWithApplicantSchema", () => {
       overallGpa: "",
       scienceGpa: "",
       pceHours: "",
+      greScore: "",
     });
     expect(ok.success).toBe(true);
 
@@ -75,6 +105,7 @@ describe("createApplicationWithApplicantSchema", () => {
       overallGpa: "",
       scienceGpa: "",
       pceHours: "",
+      greScore: "",
     });
     expect(missingState.success).toBe(false);
   });
@@ -91,6 +122,7 @@ describe("createApplicationWithApplicantSchema", () => {
       overallGpa: "",
       scienceGpa: "",
       pceHours: "",
+      greScore: "305",
     });
     expect(ok.success).toBe(true);
 
@@ -104,6 +136,7 @@ describe("createApplicationWithApplicantSchema", () => {
       overallGpa: "",
       scienceGpa: "",
       pceHours: "",
+      greScore: "",
     });
     expect(missingOutcome.success).toBe(false);
   });

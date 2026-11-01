@@ -66,14 +66,14 @@ function timestampsForStatusChange(options: {
   return { waitlistedAt, acceptedAt };
 }
 
-async function assertSchoolsExist(schoolIds: string[]) {
+async function loadSchoolsForIds(schoolIds: string[]) {
   const unique = [...new Set(schoolIds)];
   const db = createDb();
   const rows = await db
-    .select({ id: schools.id })
+    .select({ id: schools.id, requiresGre: schools.requiresGre })
     .from(schools)
     .where(inArray(schools.id, unique));
-  return rows.length === unique.length;
+  return rows;
 }
 
 export async function createApplicationWithApplicant(
@@ -90,11 +90,15 @@ export async function createApplicationWithApplicant(
   }
 
   const schoolIds = [...new Set(parsed.data.schoolIds)];
-  if (!(await assertSchoolsExist(schoolIds))) {
+  const schoolRows = await loadSchoolsForIds(schoolIds);
+  if (schoolRows.length !== schoolIds.length) {
     return fail("One or more selected schools were not found.", {
       schoolIds: ["One or more selected schools were not found."],
     });
   }
+  const greRequiredBySchool = new Map(
+    schoolRows.map((row) => [row.id, row.requiresGre]),
+  );
 
   const outcomesBySchool = new Map(
     parsed.data.schoolOutcomes.map((row) => [row.schoolId, row]),
@@ -118,6 +122,7 @@ export async function createApplicationWithApplicant(
           previousWaitlistedAt: null,
           previousAcceptedAt: null,
         });
+        const storeGre = greRequiredBySchool.get(schoolId) === true;
         return {
           applicantId: applicant.id,
           schoolId,
@@ -125,6 +130,7 @@ export async function createApplicationWithApplicant(
           overallGpa: parsed.data.overallGpa,
           scienceGpa: parsed.data.scienceGpa,
           pceHours: parsed.data.pceHours,
+          greScore: storeGre ? parsed.data.greScore : null,
           applicationAttempt: outcome.applicationAttempt,
           status,
           waitlistedAt,
@@ -155,6 +161,7 @@ export async function createApplicationWithApplicant(
     await invalidateDashboardCountsCache();
     await invalidateApplicationListCountsCache();
     revalidatePath("/applications");
+    revalidatePath("/applications/new");
     revalidatePath("/dashboard");
     revalidatePath(`/applicants/${applicant.id}`);
     for (const schoolId of schoolIds) {
@@ -162,10 +169,7 @@ export async function createApplicationWithApplicant(
     }
   });
 
-  if (createdApps.length === 1) {
-    redirect(`/applications/${createdApps[0]!.id}`);
-  }
-  redirect(`/applicants/${applicant.id}`);
+  redirect("/applications/new");
 }
 
 export async function createApplicationForApplicant(
@@ -194,11 +198,15 @@ export async function createApplicationForApplicant(
   }
 
   const schoolIds = [...new Set(parsed.data.schoolIds)];
-  if (!(await assertSchoolsExist(schoolIds))) {
+  const schoolRows = await loadSchoolsForIds(schoolIds);
+  if (schoolRows.length !== schoolIds.length) {
     return fail("One or more selected schools were not found.", {
       schoolIds: ["One or more selected schools were not found."],
     });
   }
+  const greRequiredBySchool = new Map(
+    schoolRows.map((row) => [row.id, row.requiresGre]),
+  );
 
   const outcomesBySchool = new Map(
     parsed.data.schoolOutcomes.map((row) => [row.schoolId, row]),
@@ -216,6 +224,7 @@ export async function createApplicationForApplicant(
           previousWaitlistedAt: null,
           previousAcceptedAt: null,
         });
+        const storeGre = greRequiredBySchool.get(schoolId) === true;
         return {
           applicantId,
           schoolId,
@@ -223,6 +232,7 @@ export async function createApplicationForApplicant(
           overallGpa: parsed.data.overallGpa,
           scienceGpa: parsed.data.scienceGpa,
           pceHours: parsed.data.pceHours,
+          greScore: storeGre ? parsed.data.greScore : null,
           applicationAttempt: outcome.applicationAttempt,
           status,
           waitlistedAt,
@@ -246,6 +256,7 @@ export async function createApplicationForApplicant(
     await invalidateDashboardCountsCache();
     await invalidateApplicationListCountsCache();
     revalidatePath("/applications");
+    revalidatePath("/applications/new");
     revalidatePath("/dashboard");
     revalidatePath(`/applicants/${applicantId}`);
     for (const schoolId of schoolIds) {
@@ -253,10 +264,7 @@ export async function createApplicationForApplicant(
     }
   });
 
-  if (createdApps.length === 1) {
-    redirect(`/applications/${createdApps[0]!.id}`);
-  }
-  redirect(`/applicants/${applicantId}`);
+  redirect("/applications/new");
 }
 
 export async function updateApplication(
@@ -284,11 +292,13 @@ export async function updateApplication(
     return fail("Application not found.");
   }
 
-  if (!(await assertSchoolsExist([parsed.data.schoolId]))) {
+  const schoolRows = await loadSchoolsForIds([parsed.data.schoolId]);
+  if (schoolRows.length !== 1) {
     return fail("Selected school was not found.", {
       schoolId: ["Selected school was not found."],
     });
   }
+  const storeGre = schoolRows[0]!.requiresGre;
 
   const status = formValueToStatus(parsed.data.status);
   const { waitlistedAt, acceptedAt } = timestampsForStatusChange({
@@ -306,6 +316,7 @@ export async function updateApplication(
       overallGpa: parsed.data.overallGpa,
       scienceGpa: parsed.data.scienceGpa,
       pceHours: parsed.data.pceHours,
+      greScore: storeGre ? parsed.data.greScore : null,
       applicationAttempt: parsed.data.applicationAttempt,
       status,
       waitlistedAt,

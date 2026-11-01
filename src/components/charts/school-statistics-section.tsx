@@ -1,5 +1,6 @@
 import { AttemptsBarChart } from "@/components/charts/attempts-bar-chart";
 import { GpaDistributionChart } from "@/components/charts/gpa-distribution-chart";
+import { GreDistributionChart } from "@/components/charts/gre-distribution-chart";
 import { OutcomeBarChart } from "@/components/charts/outcome-bar-chart";
 import { PceDistributionChart } from "@/components/charts/pce-distribution-chart";
 import { ResidencyPieChart } from "@/components/charts/residency-pie-chart";
@@ -15,10 +16,12 @@ export function SchoolStatisticsSection({ stats }: Props) {
     overallGpa: null,
     scienceGpa: null,
     pceHours: null,
+    greScore: null,
     bcpGpaN: 0,
     overallGpaN: 0,
     scienceGpaN: 0,
     pceHoursN: 0,
+    greScoreN: 0,
   };
 
   return (
@@ -47,6 +50,13 @@ export function SchoolStatisticsSection({ stats }: Props) {
             averageHours={averages.pceHours}
             sampleSize={averages.pceHoursN}
           />
+          {stats.requiresGre ? (
+            <GreDistributionChart
+              data={stats.greScore}
+              averageScore={averages.greScore}
+              sampleSize={averages.greScoreN}
+            />
+          ) : null}
           <GpaDistributionChart
             title="BCP GPA"
             data={stats.bcpGpa}

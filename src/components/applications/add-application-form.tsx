@@ -33,6 +33,7 @@ export function AddApplicationForm({ applicantId }: { applicantId: string }) {
       overallGpa: "",
       scienceGpa: "",
       pceHours: "",
+      greScore: "",
     },
   });
 

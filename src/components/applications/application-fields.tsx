@@ -12,6 +12,10 @@ import {
 } from "react-hook-form";
 
 import { getSchoolsByIdsAction } from "@/actions/schools";
+import {
+  GRE_SCORE_MAX,
+  GRE_SCORE_MIN,
+} from "@/lib/validation/application";
 import { SchoolSelector } from "@/components/schools/school-selector";
 import { StateCombobox } from "@/components/schools/state-combobox";
 import {
@@ -203,9 +207,23 @@ function SchoolField<T extends FieldValues>({
 
 function GpaAndPceFields<T extends FieldValues>({
   control,
+  showGre,
 }: {
   control: Control<T>;
+  showGre: boolean;
 }) {
+  const { setValue } = useFormContext<T>();
+
+  // Clear GRE when no selected school requires it.
+  useEffect(() => {
+    if (!showGre) {
+      setValue("greScore" as Path<T>, "" as never, {
+        shouldDirty: true,
+        shouldValidate: false,
+      });
+    }
+  }, [showGre, setValue]);
+
   return (
     <>
       <div className="grid gap-4 sm:grid-cols-3">
@@ -292,34 +310,109 @@ function GpaAndPceFields<T extends FieldValues>({
         />
       </div>
 
-      <FormField
-        control={control}
-        name={"pceHours" as Path<T>}
-        render={({ field }) => (
-          <FormItem>
-            <FormLabel>PCE hours</FormLabel>
-            <FormControl>
-              <Input
-                type="number"
-                min={0}
-                step={1}
-                placeholder="Optional"
-                value={
-                  field.value === null || field.value === undefined
-                    ? ""
-                    : String(field.value)
-                }
-                onChange={field.onChange}
-                onBlur={field.onBlur}
-                name={field.name}
-              />
-            </FormControl>
-            <FormMessage />
-          </FormItem>
-        )}
-      />
+      <div className={cn("grid gap-4", showGre ? "sm:grid-cols-2" : "sm:grid-cols-1")}>
+        <FormField
+          control={control}
+          name={"pceHours" as Path<T>}
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>PCE hours</FormLabel>
+              <FormControl>
+                <Input
+                  type="number"
+                  min={0}
+                  step={1}
+                  placeholder="Optional"
+                  value={
+                    field.value === null || field.value === undefined
+                      ? ""
+                      : String(field.value)
+                  }
+                  onChange={field.onChange}
+                  onBlur={field.onBlur}
+                  name={field.name}
+                />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+        {showGre ? (
+          <FormField
+            control={control}
+            name={"greScore" as Path<T>}
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>GRE score (combined)</FormLabel>
+                <FormControl>
+                  <Input
+                    type="number"
+                    min={GRE_SCORE_MIN}
+                    max={GRE_SCORE_MAX}
+                    step={1}
+                    placeholder={`${GRE_SCORE_MIN}–${GRE_SCORE_MAX}`}
+                    value={
+                      field.value === null || field.value === undefined
+                        ? ""
+                        : String(field.value)
+                    }
+                    onChange={field.onChange}
+                    onBlur={field.onBlur}
+                    name={field.name}
+                  />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        ) : null}
+      </div>
     </>
   );
+}
+
+function useSelectedSchoolIdsRequiresGre<T extends FieldValues>({
+  control,
+  multiSchool,
+}: {
+  control: Control<T>;
+  multiSchool: boolean;
+}): boolean {
+  const watchedMulti = useWatch({
+    control,
+    name: "schoolIds" as Path<T>,
+  }) as string[] | undefined;
+  const watchedSingle = useWatch({
+    control,
+    name: "schoolId" as Path<T>,
+  }) as string | undefined;
+
+  const schoolIds = useMemo(() => {
+    if (multiSchool) {
+      return (watchedMulti ?? []).filter(Boolean);
+    }
+    return watchedSingle ? [watchedSingle] : [];
+  }, [multiSchool, watchedMulti, watchedSingle]);
+
+  const schoolIdsKey = schoolIds.join("|");
+  const [requiresGre, setRequiresGre] = useState(false);
+
+  useEffect(() => {
+    if (schoolIds.length === 0) {
+      setRequiresGre(false);
+      return;
+    }
+    let cancelled = false;
+    void getSchoolsByIdsAction(schoolIds).then((rows) => {
+      if (cancelled) return;
+      setRequiresGre(rows.some((row) => row.requiresGre));
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [schoolIdsKey, schoolIds]);
+
+  return requiresGre;
 }
 
 function AttemptField<T extends FieldValues>({
@@ -553,6 +646,11 @@ export function ApplicationFields<T extends FieldValues>({
   includeInactiveSchools = false,
   layout = "stack",
 }: ApplicationFieldsProps<T>) {
+  const showGre = useSelectedSchoolIdsRequiresGre({
+    control,
+    multiSchool,
+  });
+
   const schoolField = (
     <SchoolField
       control={control}
@@ -572,6 +670,11 @@ export function ApplicationFields<T extends FieldValues>({
       </div>
     </div>
   );
+
+  const academicsTitle = showGre ? "GPAs, PCE & GRE" : "GPAs & PCE";
+  const academicsDescription = showGre
+    ? "Optional academics. GRE appears because a selected school requires it."
+    : "Optional academic inputs shared across the selected schools.";
 
   if (layout === "cards") {
     const schoolTitle = multiSchool ? "Schools" : "School";
@@ -597,11 +700,8 @@ export function ApplicationFields<T extends FieldValues>({
             </SectionCard>
           )}
 
-          <SectionCard
-            title="GPAs & PCE"
-            description="Optional academic inputs shared across the selected schools."
-          >
-            <GpaAndPceFields control={control} />
+          <SectionCard title={academicsTitle} description={academicsDescription}>
+            <GpaAndPceFields control={control} showGre={showGre} />
           </SectionCard>
         </div>
 
@@ -629,7 +729,7 @@ export function ApplicationFields<T extends FieldValues>({
     <>
       {includeHomeState ? <HomeStateField control={control} /> : null}
       {schoolField}
-      <GpaAndPceFields control={control} />
+      <GpaAndPceFields control={control} showGre={showGre} />
       {multiSchool ? (
         statusAttemptFields
       ) : (

@@ -41,6 +41,7 @@ export function ApplicationEditForm({
       overallGpa: application.overallGpa ?? "",
       scienceGpa: application.scienceGpa ?? "",
       pceHours: application.pceHours ?? "",
+      greScore: application.greScore ?? "",
       applicationAttempt: application.applicationAttempt,
       status: statusToFormValue(application.status),
     },

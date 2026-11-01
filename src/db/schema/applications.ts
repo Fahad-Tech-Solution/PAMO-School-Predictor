@@ -41,6 +41,9 @@ export const applications = pgTable(
 
     pceHours: integer("pce_hours"),
 
+    /** Combined Verbal+Quant GRE total. Only used when the school requires GRE. */
+    greScore: integer("gre_score"),
+
     applicationAttempt: integer("application_attempt").notNull().default(1),
 
     status: applicationStatusEnum("status"),
@@ -64,6 +67,7 @@ export const applications = pgTable(
     index("applications_science_gpa_idx").on(table.scienceGpa),
     index("applications_bcp_gpa_idx").on(table.bcpGpa),
     index("applications_pce_hours_idx").on(table.pceHours),
+    index("applications_gre_score_idx").on(table.greScore),
     index("applications_created_at_idx").on(table.createdAt),
     index("applications_school_status_created_idx").on(
       table.schoolId,
@@ -85,6 +89,10 @@ export const applications = pgTable(
     check(
       "applications_pce_hours_nonnegative",
       sql`${table.pceHours} IS NULL OR ${table.pceHours} >= 0`,
+    ),
+    check(
+      "applications_gre_score_range",
+      sql`${table.greScore} IS NULL OR (${table.greScore} >= 270 AND ${table.greScore} <= 330)`,
     ),
     check(
       "applications_attempt_positive",

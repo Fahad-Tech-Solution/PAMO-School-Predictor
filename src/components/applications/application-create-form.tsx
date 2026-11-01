@@ -34,6 +34,7 @@ export function ApplicationCreateForm() {
       overallGpa: "",
       scienceGpa: "",
       pceHours: "",
+      greScore: "",
     },
   });
 

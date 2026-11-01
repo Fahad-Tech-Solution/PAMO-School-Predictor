@@ -17,12 +17,14 @@ import {
   countOutcomes,
   countResidency,
   GPA_BINS,
+  GRE_BINS,
   PCE_BINS,
   type ChartDatum,
 } from "@/lib/statistics/bins";
 
 export type SchoolStatistics = {
   schoolId: string;
+  requiresGre: boolean;
   totalApplications: number;
   residency: ChartDatum[];
   outcomes: ChartDatum[];
@@ -31,16 +33,19 @@ export type SchoolStatistics = {
   overallGpa: ChartDatum[];
   scienceGpa: ChartDatum[];
   pceHours: ChartDatum[];
+  greScore: ChartDatum[];
   /** Summary averages — null when no numeric values recorded. */
   averages: {
     bcpGpa: number | null;
     overallGpa: number | null;
     scienceGpa: number | null;
     pceHours: number | null;
+    greScore: number | null;
     bcpGpaN: number;
     overallGpaN: number;
     scienceGpaN: number;
     pceHoursN: number;
+    greScoreN: number;
   };
 };
 
@@ -61,10 +66,12 @@ const emptyAverages: SchoolStatistics["averages"] = {
   overallGpa: null,
   scienceGpa: null,
   pceHours: null,
+  greScore: null,
   bcpGpaN: 0,
   overallGpaN: 0,
   scienceGpaN: 0,
   pceHoursN: 0,
+  greScoreN: 0,
 };
 
 async function computeSchoolStatistics(
@@ -73,7 +80,11 @@ async function computeSchoolStatistics(
   const db = createDb();
 
   const [school] = await db
-    .select({ id: schools.id, state: schools.state })
+    .select({
+      id: schools.id,
+      state: schools.state,
+      requiresGre: schools.requiresGre,
+    })
     .from(schools)
     .where(eq(schools.id, schoolId))
     .limit(1);
@@ -88,6 +99,7 @@ async function computeSchoolStatistics(
       overallGpa: applications.overallGpa,
       scienceGpa: applications.scienceGpa,
       pceHours: applications.pceHours,
+      greScore: applications.greScore,
       homeState: applicants.homeState,
     })
     .from(applications)
@@ -98,6 +110,7 @@ async function computeSchoolStatistics(
 
   const empty: SchoolStatistics = {
     schoolId,
+    requiresGre: school.requiresGre,
     totalApplications: 0,
     residency: countResidency([]),
     outcomes: countOutcomes([]),
@@ -106,6 +119,7 @@ async function computeSchoolStatistics(
     overallGpa: countIntoBins([], GPA_BINS),
     scienceGpa: countIntoBins([], GPA_BINS),
     pceHours: countIntoBins([], PCE_BINS),
+    greScore: countIntoBins([], GRE_BINS),
     averages: emptyAverages,
   };
 
@@ -131,9 +145,13 @@ async function computeSchoolStatistics(
   const pceValues = rows
     .map((row) => row.pceHours)
     .filter((n): n is number => n != null);
+  const greValues = rows
+    .map((row) => row.greScore)
+    .filter((n): n is number => n != null);
 
   return {
     schoolId,
+    requiresGre: school.requiresGre,
     totalApplications,
     residency: countResidency(residencies),
     outcomes: countOutcomes(statuses),
@@ -142,22 +160,25 @@ async function computeSchoolStatistics(
     overallGpa: countIntoBins(overallValues, GPA_BINS),
     scienceGpa: countIntoBins(scienceValues, GPA_BINS),
     pceHours: countIntoBins(pceValues, PCE_BINS),
+    greScore: countIntoBins(greValues, GRE_BINS),
     averages: {
       bcpGpa: average(bcpValues),
       overallGpa: average(overallValues),
       scienceGpa: average(scienceValues),
       pceHours: average(pceValues),
+      greScore: average(greValues),
       bcpGpaN: bcpValues.length,
       overallGpaN: overallValues.length,
       scienceGpaN: scienceValues.length,
       pceHoursN: pceValues.length,
+      greScoreN: greValues.length,
     },
   };
 }
 
 /**
  * Aggregate chart series for one school from historical applications.
- * Cached in Upstash Redis when configured. Null GPA/PCE omitted from distributions.
+ * Cached in Upstash Redis when configured. Null GPA/PCE/GRE omitted from distributions.
  */
 export async function getSchoolStatistics(
   schoolId: string,

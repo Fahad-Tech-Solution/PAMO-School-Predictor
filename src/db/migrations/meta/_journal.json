@@ -36,6 +36,13 @@
       "when": 1791600000000,
       "tag": "0004_applications_list_indexes",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1791900000000,
+      "tag": "0005_applications_gre_score",
+      "breakpoints": true
     }
   ]
 }

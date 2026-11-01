@@ -93,6 +93,12 @@ export async function ApplicationDetailContent({ id, isAdmin }: Props) {
               <dt className="text-muted-foreground">PCE hours</dt>
               <dd className="font-medium">{application.pceHours ?? "—"}</dd>
             </div>
+            {school.requiresGre ? (
+              <div>
+                <dt className="text-muted-foreground">GRE score (combined)</dt>
+                <dd className="font-medium">{application.greScore ?? "—"}</dd>
+              </div>
+            ) : null}
             <div>
               <dt className="text-muted-foreground">Waitlisted at</dt>
               <dd className="font-medium">

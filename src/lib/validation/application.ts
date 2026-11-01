@@ -36,6 +36,32 @@ function optionalPce(value: unknown, ctx: z.RefinementCtx) {
   return num;
 }
 
+/** Combined Verbal+Quant GRE total (270–330). */
+export const GRE_SCORE_MIN = 270;
+export const GRE_SCORE_MAX = 330;
+
+function optionalGre(value: unknown, ctx: z.RefinementCtx) {
+  if (value === null || value === undefined) return null;
+  const raw = String(value).trim();
+  if (!raw) return null;
+  const num = Number(raw);
+  if (!Number.isInteger(num)) {
+    ctx.addIssue({
+      code: "custom",
+      message: "GRE score must be a whole number.",
+    });
+    return z.NEVER;
+  }
+  if (num < GRE_SCORE_MIN || num > GRE_SCORE_MAX) {
+    ctx.addIssue({
+      code: "custom",
+      message: `GRE score must be between ${GRE_SCORE_MIN} and ${GRE_SCORE_MAX}.`,
+    });
+    return z.NEVER;
+  }
+  return num;
+}
+
 export const applicationStatusValues = [
   "UNKNOWN",
   "ACCEPTED",
@@ -48,6 +74,7 @@ const academicFields = {
   overallGpa: z.any().transform(optionalGpa),
   scienceGpa: z.any().transform(optionalGpa),
   pceHours: z.any().transform(optionalPce),
+  greScore: z.any().transform(optionalGre),
 };
 
 const attemptAndStatusFields = {
