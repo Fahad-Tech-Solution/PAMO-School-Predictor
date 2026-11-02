@@ -6,12 +6,19 @@ import { requireAuth } from "@/lib/auth/session";
 
 export const instant = false;
 
-export default async function NewApplicationPage() {
+export default async function NewApplicationPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ saved?: string }>;
+}) {
   const user = await requireAuth();
 
   if (user.role !== "ADMIN") {
     redirect("/applications");
   }
+
+  const params = await searchParams;
+  const savedToken = params.saved?.trim() || null;
 
   return (
     <div className="flex w-full flex-col gap-4">
@@ -26,7 +33,10 @@ export default async function NewApplicationPage() {
         </p>
       </div>
 
-      <ApplicationCreateForm />
+      <ApplicationCreateForm
+        key={savedToken ?? "new"}
+        justSaved={savedToken != null}
+      />
     </div>
   );
 }

@@ -66,6 +66,38 @@ export function PredictorForm() {
     <div className="space-y-8">
       <Form {...form}>
         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+          <Card className="w-full overflow-visible bg-white">
+            <CardHeader className="border-b">
+              <CardTitle className="text-base font-semibold text-primary">
+                Schools to compare
+              </CardTitle>
+              <CardDescription>
+                Select 1–{MAX_SCHOOLS} schools. Active schools only for new
+                comparisons.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="overflow-visible pt-4">
+              <FormField
+                control={form.control}
+                name="schoolIds"
+                render={({ field }) => (
+                  <FormItem>
+                    <SchoolSelector
+                      multiple
+                      name="schoolIds"
+                      label=""
+                      value={(field.value as string[]) ?? []}
+                      onChange={(ids) =>
+                        field.onChange(ids.slice(0, MAX_SCHOOLS))
+                      }
+                    />
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </CardContent>
+          </Card>
+
           <div className="grid gap-4 md:grid-cols-2">
             <Card className="overflow-visible bg-white">
               <CardHeader className="border-b">
@@ -153,53 +185,21 @@ export function PredictorForm() {
             </Card>
           </div>
 
-          <Card className="w-full overflow-visible bg-white">
-            <CardHeader className="border-b">
-              <CardTitle className="text-base font-semibold text-primary">
-                Schools to compare
-              </CardTitle>
-              <CardDescription>
-                Select 1–{MAX_SCHOOLS} schools. Active schools only for new
-                comparisons.
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4 overflow-visible pt-4">
-              <FormField
-                control={form.control}
-                name="schoolIds"
-                render={({ field }) => (
-                  <FormItem>
-                    <SchoolSelector
-                      multiple
-                      name="schoolIds"
-                      label=""
-                      value={(field.value as string[]) ?? []}
-                      onChange={(ids) =>
-                        field.onChange(ids.slice(0, MAX_SCHOOLS))
-                      }
-                    />
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+          {serverState && !serverState.ok ? (
+            <Alert
+              variant="destructive"
+              className="border-destructive/40 bg-destructive/5"
+            >
+              <AlertTitle>Unable to run predictor</AlertTitle>
+              <AlertDescription>{serverState.message}</AlertDescription>
+            </Alert>
+          ) : null}
 
-              {serverState && !serverState.ok ? (
-                <Alert
-                  variant="destructive"
-                  className="border-destructive/40 bg-destructive/5"
-                >
-                  <AlertTitle>Unable to run predictor</AlertTitle>
-                  <AlertDescription>{serverState.message}</AlertDescription>
-                </Alert>
-              ) : null}
-
-              <div className="flex justify-end">
-                <Button type="submit" disabled={pending}>
-                  {pending ? "Comparing…" : "Run predictor"}
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
+          <div className="flex justify-end">
+            <Button type="submit" disabled={pending}>
+              {pending ? "Comparing…" : "Run predictor"}
+            </Button>
+          </div>
         </form>
       </Form>
 

@@ -17,25 +17,36 @@ import {
   type CreateApplicationWithApplicantValues,
 } from "@/lib/validation/application";
 
-export function ApplicationCreateForm() {
+const emptyDefaults: CreateApplicationWithApplicantValues = {
+  homeState: "",
+  schoolIds: [],
+  schoolOutcomes: [],
+  bcpGpa: "",
+  overallGpa: "",
+  scienceGpa: "",
+  pceHours: "",
+  greScore: "",
+};
+
+export function ApplicationCreateForm({
+  justSaved = false,
+}: {
+  justSaved?: boolean;
+}) {
   const [pending, startTransition] = useTransition();
   const [serverState, setServerState] = useState<ApplicationActionState | null>(
-    null,
+    justSaved
+      ? {
+          ok: true,
+          message: "Application saved. This form is ready for the next one.",
+        }
+      : null,
   );
 
   const form = useForm<CreateApplicationWithApplicantValues>({
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     resolver: zodResolver(createApplicationWithApplicantSchema) as any,
-    defaultValues: {
-      homeState: "",
-      schoolIds: [],
-      schoolOutcomes: [],
-      bcpGpa: "",
-      overallGpa: "",
-      scienceGpa: "",
-      pceHours: "",
-      greScore: "",
-    },
+    defaultValues: emptyDefaults,
   });
 
   function onSubmit(values: CreateApplicationWithApplicantValues) {
@@ -77,7 +88,7 @@ export function ApplicationCreateForm() {
 
         <div className="flex justify-end">
           <Button type="submit" size="default" disabled={pending}>
-            {pending ? "Saving…" : "Create application"}
+            {pending ? "Saving…" : "Save application"}
           </Button>
         </div>
       </form>

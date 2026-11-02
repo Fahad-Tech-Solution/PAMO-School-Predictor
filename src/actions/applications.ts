@@ -169,7 +169,8 @@ export async function createApplicationWithApplicant(
     }
   });
 
-  redirect("/applications/new");
+  // Unique query forces a remount so the form clears after soft-nav to the same path.
+  redirect(`/applications/new?saved=${Date.now()}`);
 }
 
 export async function createApplicationForApplicant(
@@ -264,7 +265,8 @@ export async function createApplicationForApplicant(
     }
   });
 
-  redirect("/applications/new");
+  // Unique query forces a remount so the form clears after soft-nav to the same path.
+  redirect(`/applications/new?saved=${Date.now()}`);
 }
 
 export async function updateApplication(
