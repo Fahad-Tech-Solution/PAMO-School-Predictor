@@ -686,6 +686,10 @@ export function ApplicationFields<T extends FieldValues>({
 
     return (
       <div className="space-y-4">
+        <SectionCard title={schoolTitle} description={schoolDescription}>
+          {schoolField}
+        </SectionCard>
+
         <div className="grid gap-4 md:grid-cols-2">
           {includeHomeState ? (
             <SectionCard
@@ -694,22 +698,16 @@ export function ApplicationFields<T extends FieldValues>({
             >
               <HomeStateField control={control} />
             </SectionCard>
-          ) : (
-            <SectionCard title={schoolTitle} description={schoolDescription}>
-              {schoolField}
-            </SectionCard>
-          )}
+          ) : null}
 
-          <SectionCard title={academicsTitle} description={academicsDescription}>
+          <SectionCard
+            title={academicsTitle}
+            description={academicsDescription}
+            className={includeHomeState ? undefined : "md:col-span-2"}
+          >
             <GpaAndPceFields control={control} showGre={showGre} />
           </SectionCard>
         </div>
-
-        {includeHomeState ? (
-          <SectionCard title={schoolTitle} description={schoolDescription}>
-            {schoolField}
-          </SectionCard>
-        ) : null}
 
         <SectionCard
           title={multiSchool ? "Status & attempt by school" : "Status & attempt"}
