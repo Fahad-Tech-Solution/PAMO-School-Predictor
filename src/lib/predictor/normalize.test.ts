@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   normalizeGpa,
+  normalizeGre,
   normalizePce,
   parseOptionalNumber,
 } from "@/lib/predictor/normalize";
@@ -26,6 +27,18 @@ describe("normalizePce", () => {
 
   it("clamps above the cap", () => {
     expect(normalizePce(50_000)).toBe(1);
+  });
+});
+
+describe("normalizeGre", () => {
+  it("maps 270 → 0 and 330 → 1", () => {
+    expect(normalizeGre(270)).toBe(0);
+    expect(normalizeGre(330)).toBe(1);
+  });
+
+  it("clamps out-of-range values", () => {
+    expect(normalizeGre(200)).toBe(0);
+    expect(normalizeGre(400)).toBe(1);
   });
 });
 

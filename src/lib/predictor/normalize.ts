@@ -1,4 +1,10 @@
-import { GPA_MAX, GPA_MIN, PCE_CAP } from "@/lib/predictor/config";
+import {
+  GPA_MAX,
+  GPA_MIN,
+  GRE_MAX,
+  GRE_MIN,
+  PCE_CAP,
+} from "@/lib/predictor/config";
 
 /** Map GPA in [2.7, 4.0] to [0, 1]. Out-of-range values are clamped. */
 export function normalizeGpa(gpa: number): number {
@@ -10,6 +16,12 @@ export function normalizeGpa(gpa: number): number {
 export function normalizePce(hours: number): number {
   const clamped = Math.min(PCE_CAP, Math.max(0, hours));
   return clamped / PCE_CAP;
+}
+
+/** Map combined GRE total in [270, 330] to [0, 1]. Out-of-range values are clamped. */
+export function normalizeGre(score: number): number {
+  const clamped = Math.min(GRE_MAX, Math.max(GRE_MIN, score));
+  return (clamped - GRE_MIN) / (GRE_MAX - GRE_MIN);
 }
 
 export function parseOptionalNumber(value: string | number | null | undefined): number | null {

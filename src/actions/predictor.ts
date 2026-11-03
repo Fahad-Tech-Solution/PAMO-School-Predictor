@@ -37,6 +37,7 @@ export async function runPredictorAction(
       overallGpa: parsed.data.overallGpa,
       scienceGpa: parsed.data.scienceGpa,
       pceHours: parsed.data.pceHours,
+      greScore: parsed.data.greScore,
       schoolIds: uniqueSchoolIds,
     });
 

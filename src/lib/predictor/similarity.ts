@@ -4,7 +4,11 @@ import {
   SIMILARITY_MAX_DISTANCE,
   type FeatureKey,
 } from "@/lib/predictor/config";
-import { normalizeGpa, normalizePce } from "@/lib/predictor/normalize";
+import {
+  normalizeGpa,
+  normalizeGre,
+  normalizePce,
+} from "@/lib/predictor/normalize";
 import type { Residency } from "@/lib/applications/residency";
 
 export type CandidateFeatures = {
@@ -12,6 +16,7 @@ export type CandidateFeatures = {
   overallGpa: number | null;
   scienceGpa: number | null;
   pceHours: number | null;
+  greScore: number | null;
   /** Candidate residency relative to the school being scored. */
   residency: Residency;
 };
@@ -22,6 +27,7 @@ export type HistoricalFeatures = {
   overallGpa: number | null;
   scienceGpa: number | null;
   pceHours: number | null;
+  greScore: number | null;
   residency: Residency;
   status: "ACCEPTED" | "NOT_ACCEPTED" | "WAITLISTED" | null;
 };
@@ -73,6 +79,12 @@ function buildDimensions(
       c: candidate.pceHours,
       h: historical.pceHours,
       normalize: normalizePce,
+    },
+    {
+      key: "greScore",
+      c: candidate.greScore,
+      h: historical.greScore,
+      normalize: normalizeGre,
     },
   ];
 
@@ -141,7 +153,8 @@ export function selectNeighbors(
       (candidate.bcpGpa != null && row.bcpGpa != null) ||
       (candidate.overallGpa != null && row.overallGpa != null) ||
       (candidate.scienceGpa != null && row.scienceGpa != null) ||
-      (candidate.pceHours != null && row.pceHours != null);
+      (candidate.pceHours != null && row.pceHours != null) ||
+      (candidate.greScore != null && row.greScore != null);
 
     if (!hasNumericOverlap) {
       // Residency-only comparison is still allowed per plan.

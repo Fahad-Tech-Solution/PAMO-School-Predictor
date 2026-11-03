@@ -1,15 +1,18 @@
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useState, useTransition } from "react";
-import { useForm } from "react-hook-form";
+import { useEffect, useTransition, useState } from "react";
+import { useForm, useWatch } from "react-hook-form";
 
 import {
   runPredictorAction,
   type PredictorActionState,
 } from "@/actions/predictor";
 import { PredictorResults } from "@/components/predictor/predictor-results";
-import { SchoolSelector } from "@/components/schools/school-selector";
+import {
+  SchoolSelector,
+  useSchoolsRequireGre,
+} from "@/components/schools/school-selector";
 import { StateCombobox } from "@/components/schools/state-combobox";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
@@ -30,6 +33,11 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { MAX_SCHOOLS } from "@/lib/predictor/config";
+import { cn } from "@/lib/utils";
+import {
+  GRE_SCORE_MAX,
+  GRE_SCORE_MIN,
+} from "@/lib/validation/application";
 import {
   predictorFormSchema,
   type PredictorFormInput,
@@ -50,9 +58,25 @@ export function PredictorForm() {
       overallGpa: "",
       scienceGpa: "",
       pceHours: "",
+      greScore: "",
       schoolIds: [],
     },
   });
+
+  const schoolIds =
+    (useWatch({ control: form.control, name: "schoolIds" }) as
+      | string[]
+      | undefined) ?? [];
+  const showGre = useSchoolsRequireGre(schoolIds, false);
+
+  useEffect(() => {
+    if (!showGre) {
+      form.setValue("greScore", "", {
+        shouldDirty: true,
+        shouldValidate: false,
+      });
+    }
+  }, [showGre, form]);
 
   function onSubmit(values: PredictorFormInput) {
     setServerState(null);
@@ -61,6 +85,11 @@ export function PredictorForm() {
       setServerState(result);
     });
   }
+
+  const academicsTitle = showGre ? "GPAs, PCE & GRE" : "GPAs & PCE";
+  const academicsDescription = showGre
+    ? "Optional academics. GRE appears because a selected school requires it."
+    : "Optional academic inputs shared across the selected schools.";
 
   return (
     <div className="space-y-8">
@@ -131,12 +160,9 @@ export function PredictorForm() {
             <Card className="overflow-visible bg-white">
               <CardHeader className="border-b">
                 <CardTitle className="text-base font-semibold text-primary">
-                  GPAs & PCE
+                  {academicsTitle}
                 </CardTitle>
-                <CardDescription>
-                  Optional academic inputs. GRE is not used as an applicant
-                  feature.
-                </CardDescription>
+                <CardDescription>{academicsDescription}</CardDescription>
               </CardHeader>
               <CardContent className="space-y-4 pt-4">
                 <div className="grid gap-4 sm:grid-cols-3">
@@ -157,30 +183,65 @@ export function PredictorForm() {
                   />
                 </div>
 
-                <FormField
-                  control={form.control}
-                  name="pceHours"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>PCE hours</FormLabel>
-                      <FormControl>
-                        <Input
-                          type="number"
-                          min={0}
-                          step={1}
-                          placeholder="Optional"
-                          value={
-                            field.value === null || field.value === undefined
-                              ? ""
-                              : String(field.value)
-                          }
-                          onChange={field.onChange}
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
+                <div
+                  className={cn(
+                    "grid gap-4",
+                    showGre ? "sm:grid-cols-2" : "sm:grid-cols-1",
                   )}
-                />
+                >
+                  <FormField
+                    control={form.control}
+                    name="pceHours"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>PCE hours</FormLabel>
+                        <FormControl>
+                          <Input
+                            type="number"
+                            min={0}
+                            step={1}
+                            placeholder="Optional"
+                            value={
+                              field.value === null || field.value === undefined
+                                ? ""
+                                : String(field.value)
+                            }
+                            onChange={field.onChange}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  {showGre ? (
+                    <FormField
+                      control={form.control}
+                      name="greScore"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>GRE score (combined)</FormLabel>
+                          <FormControl>
+                            <Input
+                              type="number"
+                              min={GRE_SCORE_MIN}
+                              max={GRE_SCORE_MAX}
+                              step={1}
+                              placeholder={`${GRE_SCORE_MIN}–${GRE_SCORE_MAX}`}
+                              value={
+                                field.value === null ||
+                                field.value === undefined
+                                  ? ""
+                                  : String(field.value)
+                              }
+                              onChange={field.onChange}
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  ) : null}
+                </div>
               </CardContent>
             </Card>
           </div>

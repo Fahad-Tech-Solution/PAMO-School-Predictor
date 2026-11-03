@@ -16,7 +16,10 @@ import {
   GRE_SCORE_MAX,
   GRE_SCORE_MIN,
 } from "@/lib/validation/application";
-import { SchoolSelector } from "@/components/schools/school-selector";
+import {
+  SchoolSelector,
+  useSchoolsRequireGre,
+} from "@/components/schools/school-selector";
 import { StateCombobox } from "@/components/schools/state-combobox";
 import {
   Card,
@@ -374,9 +377,11 @@ function GpaAndPceFields<T extends FieldValues>({
 function useSelectedSchoolIdsRequiresGre<T extends FieldValues>({
   control,
   multiSchool,
+  includeInactiveSchools,
 }: {
   control: Control<T>;
   multiSchool: boolean;
+  includeInactiveSchools: boolean;
 }): boolean {
   const watchedMulti = useWatch({
     control,
@@ -394,25 +399,7 @@ function useSelectedSchoolIdsRequiresGre<T extends FieldValues>({
     return watchedSingle ? [watchedSingle] : [];
   }, [multiSchool, watchedMulti, watchedSingle]);
 
-  const schoolIdsKey = schoolIds.join("|");
-  const [requiresGre, setRequiresGre] = useState(false);
-
-  useEffect(() => {
-    if (schoolIds.length === 0) {
-      setRequiresGre(false);
-      return;
-    }
-    let cancelled = false;
-    void getSchoolsByIdsAction(schoolIds).then((rows) => {
-      if (cancelled) return;
-      setRequiresGre(rows.some((row) => row.requiresGre));
-    });
-    return () => {
-      cancelled = true;
-    };
-  }, [schoolIdsKey, schoolIds]);
-
-  return requiresGre;
+  return useSchoolsRequireGre(schoolIds, includeInactiveSchools);
 }
 
 function AttemptField<T extends FieldValues>({
@@ -649,6 +636,7 @@ export function ApplicationFields<T extends FieldValues>({
   const showGre = useSelectedSchoolIdsRequiresGre({
     control,
     multiSchool,
+    includeInactiveSchools,
   });
 
   const schoolField = (

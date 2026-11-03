@@ -2,6 +2,10 @@ import { z } from "zod";
 
 import { US_STATE_CODES } from "@/lib/geo/us-states";
 import { MAX_SCHOOLS } from "@/lib/predictor/config";
+import {
+  GRE_SCORE_MAX,
+  GRE_SCORE_MIN,
+} from "@/lib/validation/application";
 
 function optionalGpa(value: unknown, ctx: z.RefinementCtx) {
   if (value === null || value === undefined) return null;
@@ -37,6 +41,28 @@ function optionalPce(value: unknown, ctx: z.RefinementCtx) {
   return num;
 }
 
+function optionalGre(value: unknown, ctx: z.RefinementCtx) {
+  if (value === null || value === undefined) return null;
+  const raw = String(value).trim();
+  if (!raw) return null;
+  const num = Number(raw);
+  if (!Number.isInteger(num)) {
+    ctx.addIssue({
+      code: "custom",
+      message: "GRE score must be a whole number.",
+    });
+    return z.NEVER;
+  }
+  if (num < GRE_SCORE_MIN || num > GRE_SCORE_MAX) {
+    ctx.addIssue({
+      code: "custom",
+      message: `GRE score must be between ${GRE_SCORE_MIN} and ${GRE_SCORE_MAX}.`,
+    });
+    return z.NEVER;
+  }
+  return num;
+}
+
 export const predictorFormSchema = z
   .object({
     homeState: z
@@ -50,6 +76,7 @@ export const predictorFormSchema = z
     overallGpa: z.any().transform(optionalGpa),
     scienceGpa: z.any().transform(optionalGpa),
     pceHours: z.any().transform(optionalPce),
+    greScore: z.any().transform(optionalGre),
     schoolIds: z
       .array(z.string().uuid())
       .min(1, "Select at least one school.")
@@ -60,11 +87,12 @@ export const predictorFormSchema = z
       data.bcpGpa != null ||
       data.overallGpa != null ||
       data.scienceGpa != null ||
-      data.pceHours != null;
+      data.pceHours != null ||
+      data.greScore != null;
     if (!hasNumeric) {
       ctx.addIssue({
         code: "custom",
-        message: "Enter at least one GPA or PCE hours value.",
+        message: "Enter at least one GPA, PCE hours, or GRE score value.",
         path: ["bcpGpa"],
       });
     }

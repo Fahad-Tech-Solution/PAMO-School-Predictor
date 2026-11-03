@@ -9,6 +9,10 @@ export const GPA_MAX = 4.0;
 /** PCE hours above this are capped before normalization so scale does not dominate. */
 export const PCE_CAP = 10_000;
 
+/** Combined Verbal+Quant GRE total range. */
+export const GRE_MIN = 270;
+export const GRE_MAX = 330;
+
 /** Max weighted Euclidean distance for a historical row to count as "similar". */
 export const SIMILARITY_MAX_DISTANCE = 0.35;
 
@@ -23,6 +27,7 @@ export const FEATURE_WEIGHTS = {
   overallGpa: 1,
   scienceGpa: 1,
   pceHours: 1,
+  greScore: 1,
   residency: 1,
 } as const;
 

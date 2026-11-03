@@ -13,6 +13,7 @@ export type HistoricalApplicationRow = {
   overallGpa: number | null;
   scienceGpa: number | null;
   pceHours: number | null;
+  greScore: number | null;
   homeState: string;
   status: "ACCEPTED" | "NOT_ACCEPTED" | "WAITLISTED" | null;
 };
@@ -66,6 +67,7 @@ export async function loadHistoricalApplicationsForSchools(
       overallGpa: applications.overallGpa,
       scienceGpa: applications.scienceGpa,
       pceHours: applications.pceHours,
+      greScore: applications.greScore,
       status: applications.status,
       homeState: applicants.homeState,
     })
@@ -80,6 +82,7 @@ export async function loadHistoricalApplicationsForSchools(
     overallGpa: parseOptionalNumber(row.overallGpa),
     scienceGpa: parseOptionalNumber(row.scienceGpa),
     pceHours: row.pceHours,
+    greScore: row.greScore,
     homeState: row.homeState,
     status: row.status,
   }));

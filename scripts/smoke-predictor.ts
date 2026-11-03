@@ -10,6 +10,7 @@ const candidate = {
   overallGpa: 3.6,
   scienceGpa: 3.4,
   pceHours: 2000,
+  greScore: null as number | null,
   residency: "IN_STATE" as const,
 };
 
@@ -20,6 +21,7 @@ const historical = [
     overallGpa: 3.55,
     scienceGpa: 3.35,
     pceHours: 2100,
+    greScore: null as number | null,
     residency: "IN_STATE" as const,
     status: "ACCEPTED" as const,
   },
@@ -29,6 +31,7 @@ const historical = [
     overallGpa: 3.5,
     scienceGpa: 3.3,
     pceHours: 1900,
+    greScore: null as number | null,
     residency: "OUT_OF_STATE" as const,
     status: null,
   },
@@ -38,6 +41,7 @@ const historical = [
     overallGpa: 2.9,
     scienceGpa: 2.85,
     pceHours: 8000,
+    greScore: null as number | null,
     residency: "OUT_OF_STATE" as const,
     status: "NOT_ACCEPTED" as const,
   },

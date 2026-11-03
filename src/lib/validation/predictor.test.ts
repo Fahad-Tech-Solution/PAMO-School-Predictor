@@ -25,9 +25,24 @@ describe("predictorFormSchema", () => {
       overallGpa: "",
       scienceGpa: "",
       pceHours: "",
+      greScore: "",
       schoolIds: [schoolId],
     });
     expect(ok.success).toBe(true);
+
+    const greOnly = predictorFormSchema.safeParse({
+      homeState: "CA",
+      bcpGpa: "",
+      overallGpa: "",
+      scienceGpa: "",
+      pceHours: "",
+      greScore: "310",
+      schoolIds: [schoolId],
+    });
+    expect(greOnly.success).toBe(true);
+    if (greOnly.success) {
+      expect(greOnly.data.greScore).toBe(310);
+    }
 
     const missingNumeric = predictorFormSchema.safeParse({
       homeState: "CA",
@@ -35,6 +50,7 @@ describe("predictorFormSchema", () => {
       overallGpa: "",
       scienceGpa: "",
       pceHours: "",
+      greScore: "",
       schoolIds: [schoolId],
     });
     expect(missingNumeric.success).toBe(false);
@@ -45,18 +61,20 @@ describe("predictorFormSchema", () => {
       overallGpa: "",
       scienceGpa: "",
       pceHours: "",
+      greScore: "",
       schoolIds: [],
     });
     expect(noSchools.success).toBe(false);
   });
 
-  it("rejects invalid GPA and non-integer PCE", () => {
+  it("rejects invalid GPA, non-integer PCE, and out-of-range GRE", () => {
     const badGpa = predictorFormSchema.safeParse({
       homeState: "CA",
       bcpGpa: "2.5",
       overallGpa: "",
       scienceGpa: "",
       pceHours: "",
+      greScore: "",
       schoolIds: [schoolId],
     });
     expect(badGpa.success).toBe(false);
@@ -67,8 +85,20 @@ describe("predictorFormSchema", () => {
       overallGpa: "",
       scienceGpa: "",
       pceHours: "12.5",
+      greScore: "",
       schoolIds: [schoolId],
     });
     expect(badPce.success).toBe(false);
+
+    const badGre = predictorFormSchema.safeParse({
+      homeState: "CA",
+      bcpGpa: "",
+      overallGpa: "",
+      scienceGpa: "",
+      pceHours: "",
+      greScore: "269",
+      schoolIds: [schoolId],
+    });
+    expect(badGre.success).toBe(false);
   });
 });

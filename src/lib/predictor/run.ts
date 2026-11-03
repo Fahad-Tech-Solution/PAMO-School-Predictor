@@ -23,6 +23,7 @@ export type PredictorInput = {
   overallGpa: number | null;
   scienceGpa: number | null;
   pceHours: number | null;
+  greScore: number | null;
   schoolIds: string[];
 };
 
@@ -64,6 +65,7 @@ export async function runPredictor(
         overallGpa: input.overallGpa,
         scienceGpa: input.scienceGpa,
         pceHours: input.pceHours,
+        greScore: input.greScore,
         residency: candidateResidency,
       };
 
@@ -74,6 +76,7 @@ export async function runPredictor(
         overallGpa: row.overallGpa,
         scienceGpa: row.scienceGpa,
         pceHours: row.pceHours,
+        greScore: row.greScore,
         residency: deriveResidency(row.homeState, school.state),
         status: row.status,
       }));

@@ -23,6 +23,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { useDropdownPlacement } from "@/hooks/use-dropdown-placement";
 import { getStateLabel } from "@/lib/geo/us-states";
 import type { SchoolSearchRow } from "@/lib/schools/queries";
 import { cn } from "@/lib/utils";
@@ -57,8 +58,15 @@ type CatalogCache = {
   promise: Promise<SchoolSearchRow[]>;
 };
 
-/** One shared in-flight/resolved catalog per includeInactive mode (page lifetime). */
+function catalogCacheKey(includeInactive: boolean): string {
+  return includeInactive ? "all" : "active";
+}
+
+/** One shared in-flight catalog promise per includeInactive mode (page lifetime). */
 const catalogCaches = new Map<string, CatalogCache>();
+
+/** Sync snapshot of the last resolved catalog (same keys as catalogCaches). */
+const resolvedCatalogs = new Map<string, SchoolSearchRow[]>();
 
 /** Dispatched after school create/update/activate so directory + selectors refetch. */
 export const SCHOOLS_CATALOG_INVALIDATE_EVENT =
@@ -67,24 +75,90 @@ export const SCHOOLS_CATALOG_INVALIDATE_EVENT =
 /** Drop client catalog cache after create/update/activate so selectors refetch. */
 export function invalidateSchoolCatalogClientCache(): void {
   catalogCaches.clear();
+  resolvedCatalogs.clear();
   if (typeof window !== "undefined") {
     window.dispatchEvent(new Event(SCHOOLS_CATALOG_INVALIDATE_EVENT));
   }
 }
 
+/** Instant read of the warm client catalog, or null while still loading. */
+export function peekSchoolCatalog(
+  includeInactive = false,
+): SchoolSearchRow[] | null {
+  return resolvedCatalogs.get(catalogCacheKey(includeInactive)) ?? null;
+}
+
 function loadCatalog(includeInactive: boolean): Promise<SchoolSearchRow[]> {
-  const key = includeInactive ? "all" : "active";
+  const key = catalogCacheKey(includeInactive);
   const existing = catalogCaches.get(key);
   if (existing) return existing.promise;
 
-  const promise = listSchoolsCatalogAction({ includeInactive }).catch(
-    (error) => {
+  const promise = listSchoolsCatalogAction({ includeInactive })
+    .then((rows) => {
+      resolvedCatalogs.set(key, rows);
+      return rows;
+    })
+    .catch((error) => {
       catalogCaches.delete(key);
+      resolvedCatalogs.delete(key);
       throw error;
-    },
-  );
+    });
   catalogCaches.set(key, { includeInactive, promise });
   return promise;
+}
+
+/**
+ * Whether any of the given schools require GRE, derived from the shared
+ * SchoolSelector catalog (no extra server round-trip).
+ */
+export function useSchoolsRequireGre(
+  schoolIds: string[],
+  includeInactive = false,
+): boolean {
+  const idsKey = schoolIds.join("|");
+  const [catalog, setCatalog] = useState<SchoolSearchRow[] | null>(() =>
+    peekSchoolCatalog(includeInactive),
+  );
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const peeked = peekSchoolCatalog(includeInactive);
+    if (peeked) {
+      setCatalog(peeked);
+    }
+
+    void loadCatalog(includeInactive)
+      .then((rows) => {
+        if (!cancelled) setCatalog(rows);
+      })
+      .catch(() => {
+        if (!cancelled) setCatalog([]);
+      });
+
+    const onInvalidate = () => {
+      setCatalog(null);
+      void loadCatalog(includeInactive)
+        .then((rows) => {
+          if (!cancelled) setCatalog(rows);
+        })
+        .catch(() => {
+          if (!cancelled) setCatalog([]);
+        });
+    };
+
+    window.addEventListener(SCHOOLS_CATALOG_INVALIDATE_EVENT, onInvalidate);
+    return () => {
+      cancelled = true;
+      window.removeEventListener(SCHOOLS_CATALOG_INVALIDATE_EVENT, onInvalidate);
+    };
+  }, [includeInactive]);
+
+  return useMemo(() => {
+    if (!catalog || schoolIds.length === 0) return false;
+    const byId = new Map(catalog.map((row) => [row.id, row]));
+    return schoolIds.some((id) => byId.get(id)?.requiresGre === true);
+  }, [catalog, idsKey, schoolIds]);
 }
 
 function filterSchools(
@@ -120,6 +194,7 @@ export function SchoolSelector(props: SchoolSelectorProps) {
 
   const listId = useId();
   const rootRef = useRef<HTMLDivElement>(null);
+  const anchorRef = useRef<HTMLDivElement>(null);
   const optionRefs = useRef<Array<HTMLButtonElement | null>>([]);
   const [query, setQuery] = useState("");
   const [open, setOpen] = useState(false);
@@ -127,6 +202,7 @@ export function SchoolSelector(props: SchoolSelectorProps) {
   const [catalog, setCatalog] = useState<SchoolSearchRow[] | null>(null);
   const [loadError, setLoadError] = useState(false);
   const [pending, startTransition] = useTransition();
+  const { side, maxHeight } = useDropdownPlacement(open, anchorRef, 240);
 
   const [internalSingle, setInternalSingle] = useState<string | null>(
     !multiple ? (props.defaultValue ?? null) : null,
@@ -261,14 +337,12 @@ export function SchoolSelector(props: SchoolSelectorProps) {
     const onPointerDown = (event: PointerEvent) => {
       const target = event.target as Node | null;
       if (target && rootRef.current && !rootRef.current.contains(target)) {
-        setOpen(false);
-        setQuery("");
+        closeList();
       }
     };
     const onDocKeyDown = (event: globalThis.KeyboardEvent) => {
       if (event.key === "Escape") {
-        setOpen(false);
-        setQuery("");
+        closeList();
       }
     };
     document.addEventListener("pointerdown", onPointerDown, true);
@@ -278,6 +352,12 @@ export function SchoolSelector(props: SchoolSelectorProps) {
       document.removeEventListener("keydown", onDocKeyDown);
     };
   }, [open]);
+
+  function closeList() {
+    setOpen(false);
+    setQuery("");
+    setHighlight(0);
+  }
 
   function toggle(school: SchoolSearchRow) {
     setSelectedMeta((prev) => ({ ...prev, [school.id]: school }));
@@ -289,15 +369,15 @@ export function SchoolSelector(props: SchoolSelectorProps) {
         : [...selectedMulti, school.id];
       setInternalMulti(next);
       props.onChange?.(next);
-      setQuery("");
+      // Close after each pick so GPA/PCE/GRE fields below are usable without a mouse dismiss.
+      closeList();
       return;
     }
 
     setInternalSingle(school.id);
     setSingleLabel(schoolLabel(school));
     props.onChange?.(school.id);
-    setOpen(false);
-    setQuery("");
+    closeList();
   }
 
   function remove(id: string) {
@@ -313,6 +393,10 @@ export function SchoolSelector(props: SchoolSelectorProps) {
   }
 
   function onSearchKeyDown(event: KeyboardEvent<HTMLInputElement>) {
+    if (event.key === "Tab") {
+      if (open) closeList();
+      return;
+    }
     if (event.key === "ArrowDown") {
       event.preventDefault();
       if (!open) {
@@ -354,7 +438,7 @@ export function SchoolSelector(props: SchoolSelectorProps) {
         <input type="hidden" name={name} value={selectedSingle ?? ""} />
       )}
 
-      <div className="relative min-w-0">
+      <div ref={anchorRef} className="relative min-w-0">
         <HugeiconsIcon
           icon={SearchIcon}
           size={16}
@@ -397,7 +481,11 @@ export function SchoolSelector(props: SchoolSelectorProps) {
             id={listId}
             role="listbox"
             aria-multiselectable={multiple || undefined}
-            className="absolute z-[80] mt-1 max-h-60 w-full overflow-auto rounded-md border border-border bg-popover p-1 shadow-md"
+            style={{ maxHeight }}
+            className={cn(
+              "absolute z-[80] w-full overflow-auto rounded-md border border-border bg-popover p-1 shadow-md",
+              side === "bottom" ? "top-full mt-1" : "bottom-full mb-1",
+            )}
           >
             {pending && !catalog ? (
               <p className="px-2 py-3 text-sm text-muted-foreground">
@@ -424,6 +512,7 @@ export function SchoolSelector(props: SchoolSelectorProps) {
                     }}
                     type="button"
                     role="option"
+                    tabIndex={-1}
                     aria-selected={isSelected}
                     className={cn(
                       "flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left hover:bg-muted",

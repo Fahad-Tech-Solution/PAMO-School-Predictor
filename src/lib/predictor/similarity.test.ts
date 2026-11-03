@@ -12,6 +12,7 @@ const candidate: CandidateFeatures = {
   overallGpa: 3.6,
   scienceGpa: 3.4,
   pceHours: 2000,
+  greScore: null,
   residency: "IN_STATE",
 };
 
@@ -23,6 +24,7 @@ function hist(
     overallGpa: 3.6,
     scienceGpa: 3.4,
     pceHours: 2000,
+    greScore: null,
     residency: "IN_STATE",
     status: "ACCEPTED",
     ...overrides,

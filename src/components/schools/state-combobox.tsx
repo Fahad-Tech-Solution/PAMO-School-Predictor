@@ -1,6 +1,10 @@
 "use client";
 
-import { ArrowDown01Icon, Cancel01Icon } from "@hugeicons/core-free-icons";
+import {
+  Cancel01Icon,
+  SearchIcon,
+  Tick02Icon,
+} from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import {
   useEffect,
@@ -12,7 +16,9 @@ import {
 } from "react";
 
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { useDropdownPlacement } from "@/hooks/use-dropdown-placement";
 import {
   filterStates,
   getStateLabel,
@@ -49,15 +55,22 @@ function normalizeCodes(codes: string[]): string[] {
 }
 
 export function StateCombobox(props: StateComboboxProps) {
-  const { name, disabled, placeholder = "Search state…", id } = props;
+  const {
+    name,
+    disabled,
+    placeholder = "Search state…",
+    id,
+  } = props;
   const multiple = props.multiple === true;
 
   const listId = useId();
   const rootRef = useRef<HTMLDivElement>(null);
+  const anchorRef = useRef<HTMLDivElement>(null);
   const optionRefs = useRef<Array<HTMLButtonElement | null>>([]);
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
   const [highlight, setHighlight] = useState(0);
+  const { side, maxHeight } = useDropdownPlacement(open, anchorRef, 224);
 
   const [internalSingle, setInternalSingle] = useState(
     !multiple ? (props.defaultValue ?? "") : "",
@@ -92,18 +105,15 @@ export function StateCombobox(props: StateComboboxProps) {
     const onPointerDown = (event: PointerEvent) => {
       const target = event.target as Node | null;
       if (target && rootRef.current && !rootRef.current.contains(target)) {
-        setOpen(false);
-        setQuery("");
+        closeList();
       }
     };
     const onDocKeyDown = (event: globalThis.KeyboardEvent) => {
       if (event.key === "Escape") {
-        setOpen(false);
-        setQuery("");
+        closeList();
       }
     };
 
-    // Capture phase so outside clicks close even if children stop bubbling.
     document.addEventListener("pointerdown", onPointerDown, true);
     document.addEventListener("keydown", onDocKeyDown);
     return () => {
@@ -118,6 +128,12 @@ export function StateCombobox(props: StateComboboxProps) {
     if (multiple) props.onChange?.(codes);
   }
 
+  function closeList() {
+    setOpen(false);
+    setQuery("");
+    setHighlight(0);
+  }
+
   function toggle(code: string) {
     if (multiple) {
       const exists = selectedMulti.includes(code);
@@ -126,14 +142,13 @@ export function StateCombobox(props: StateComboboxProps) {
           ? selectedMulti.filter((item) => item !== code)
           : [...selectedMulti, code],
       );
-      setQuery("");
+      closeList();
       return;
     }
 
     setInternalSingle(code);
     props.onChange?.(code);
-    setOpen(false);
-    setQuery("");
+    closeList();
   }
 
   function remove(code: string) {
@@ -146,19 +161,28 @@ export function StateCombobox(props: StateComboboxProps) {
   }
 
   function onSearchKeyDown(event: KeyboardEvent<HTMLInputElement>) {
-    if (!open || options.length === 0) return;
-
+    if (event.key === "Tab") {
+      if (open) closeList();
+      return;
+    }
     if (event.key === "ArrowDown") {
       event.preventDefault();
+      if (!open) {
+        setOpen(true);
+        return;
+      }
+      if (options.length === 0) return;
       setHighlight((index) => Math.min(index + 1, options.length - 1));
       return;
     }
     if (event.key === "ArrowUp") {
+      if (!open || options.length === 0) return;
       event.preventDefault();
       setHighlight((index) => Math.max(index - 1, 0));
       return;
     }
     if (event.key === "Enter") {
+      if (!open || options.length === 0) return;
       event.preventDefault();
       const option = options[highlight] ?? options[0];
       if (option) toggle(option.code);
@@ -168,7 +192,7 @@ export function StateCombobox(props: StateComboboxProps) {
   return (
     <div
       ref={rootRef}
-      className={cn("relative space-y-2", open && "z-[80]")}
+      className={cn("space-y-1.5", open && "relative z-[80]")}
     >
       {multiple ? (
         <input type="hidden" name={name} value={selectedMulti.join(",")} />
@@ -176,35 +200,102 @@ export function StateCombobox(props: StateComboboxProps) {
         <input type="hidden" name={name} value={selectedSingle} />
       )}
 
-      <button
-        id={id}
-        type="button"
-        disabled={disabled}
-        aria-expanded={open}
-        aria-controls={listId}
-        onClick={() => setOpen((v) => !v)}
-        className={cn(
-          "flex min-h-9 w-full items-center justify-between gap-2 rounded-lg border border-input bg-transparent px-2.5 py-1.5 text-sm outline-none transition-colors",
-          "hover:bg-muted/40 focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50",
-          "disabled:cursor-not-allowed disabled:opacity-50",
-        )}
-      >
-        <span
-          className={cn(
-            "min-w-0 flex-1 truncate text-left",
-            selectedCodes.length === 0 && "text-muted-foreground",
-          )}
-        >
-          {selectedCodes.length === 0
-            ? placeholder
-            : multiple
-              ? `${selectedCodes.length} state${selectedCodes.length === 1 ? "" : "s"} selected`
-              : getStateLabel(selectedCodes[0]!)}
-        </span>
-        <HugeiconsIcon icon={ArrowDown01Icon} size={16} strokeWidth={1.8} />
-      </button>
+      <div ref={anchorRef} className="relative min-w-0">
+        <HugeiconsIcon
+          icon={SearchIcon}
+          size={16}
+          strokeWidth={1.8}
+          className="pointer-events-none absolute top-1/2 left-3 z-10 -translate-y-1/2 text-muted-foreground"
+        />
+        <Input
+          id={id}
+          value={query}
+          disabled={disabled}
+          placeholder={
+            multiple
+              ? placeholder
+              : selectedSingle
+                ? getStateLabel(selectedSingle)
+                : placeholder
+          }
+          className="pl-9"
+          onFocus={() => setOpen(true)}
+          onChange={(e) => {
+            setQuery(e.target.value);
+            setHighlight(0);
+            setOpen(true);
+          }}
+          onKeyDown={onSearchKeyDown}
+          aria-controls={listId}
+          aria-expanded={open}
+          aria-autocomplete="list"
+          aria-activedescendant={
+            open && options[highlight]
+              ? `${listId}-opt-${options[highlight]!.code}`
+              : undefined
+          }
+          role="combobox"
+        />
 
-      {/* Chips only for multi-select filters; single select shows in the button. */}
+        {open ? (
+          <div
+            id={listId}
+            role="listbox"
+            aria-multiselectable={multiple || undefined}
+            style={{ maxHeight }}
+            className={cn(
+              "absolute z-[80] w-full overflow-auto rounded-md border border-border bg-popover p-1 shadow-md",
+              side === "bottom" ? "top-full mt-1" : "bottom-full mb-1",
+            )}
+          >
+            {options.length === 0 ? (
+              <p className="px-2 py-3 text-sm text-muted-foreground">
+                No states found.
+              </p>
+            ) : (
+              options.map((state, index) => {
+                const isSelected = selectedCodes.includes(state.code);
+                const isActive = index === highlight;
+                return (
+                  <button
+                    key={state.code}
+                    id={`${listId}-opt-${state.code}`}
+                    ref={(node) => {
+                      optionRefs.current[index] = node;
+                    }}
+                    type="button"
+                    role="option"
+                    tabIndex={-1}
+                    aria-selected={isSelected}
+                    className={cn(
+                      "flex w-full items-center justify-between rounded-md px-2 py-1.5 text-left text-sm hover:bg-muted",
+                      isSelected && "bg-muted font-medium",
+                      isActive && "bg-muted ring-1 ring-ring",
+                    )}
+                    onMouseEnter={() => setHighlight(index)}
+                    onClick={() => toggle(state.code)}
+                  >
+                    <span>
+                      {state.name} ({state.code})
+                    </span>
+                    {isSelected ? (
+                      <span className="inline-flex items-center gap-1 text-xs text-primary">
+                        Selected
+                        <HugeiconsIcon
+                          icon={Tick02Icon}
+                          size={14}
+                          strokeWidth={2.2}
+                        />
+                      </span>
+                    ) : null}
+                  </button>
+                );
+              })
+            )}
+          </div>
+        ) : null}
+      </div>
+
       {multiple && selectedCodes.length > 0 ? (
         <div className="flex flex-wrap gap-1.5">
           {selectedCodes.map((code) => (
@@ -236,76 +327,28 @@ export function StateCombobox(props: StateComboboxProps) {
         </div>
       ) : null}
 
-      {open ? (
-        <div
-          id={listId}
-          role="listbox"
-          aria-multiselectable={multiple || undefined}
-          className="absolute z-[80] mt-1 w-full rounded-md border border-border bg-popover p-2 shadow-md"
-        >
-          <Input
-            value={query}
-            onChange={(e) => {
-              setQuery(e.target.value);
-              setHighlight(0);
-            }}
-            onKeyDown={onSearchKeyDown}
-            placeholder="Type to search…"
-            className="mb-2"
-            autoFocus
-            role="combobox"
-            aria-autocomplete="list"
-            aria-controls={listId}
-            aria-expanded={open}
-            aria-activedescendant={
-              options[highlight]
-                ? `${listId}-opt-${options[highlight]!.code}`
-                : undefined
-            }
+      {!multiple && selectedSingle ? (
+        <div className="flex items-center gap-2 rounded-md border border-secondary bg-secondary px-3 py-2 text-sm text-secondary-foreground">
+          <HugeiconsIcon
+            icon={Tick02Icon}
+            size={16}
+            strokeWidth={2.2}
+            className="shrink-0"
           />
-          <div className="max-h-56 overflow-y-auto">
-            {options.length === 0 ? (
-              <p className="px-2 py-3 text-sm text-muted-foreground">
-                No states found.
-              </p>
-            ) : (
-              options.map((state, index) => {
-                const isSelected = selectedCodes.includes(state.code);
-                const isActive = index === highlight;
-                return (
-                  <button
-                    key={state.code}
-                    id={`${listId}-opt-${state.code}`}
-                    ref={(node) => {
-                      optionRefs.current[index] = node;
-                    }}
-                    type="button"
-                    role="option"
-                    aria-selected={isSelected}
-                    className={cn(
-                      "flex w-full items-center justify-between rounded-md px-2 py-1.5 text-left text-sm hover:bg-muted",
-                      isSelected && "bg-muted font-medium",
-                      isActive && "bg-muted ring-1 ring-ring",
-                    )}
-                    onMouseEnter={() => setHighlight(index)}
-                    onClick={() => toggle(state.code)}
-                  >
-                    <span>
-                      {state.name} ({state.code})
-                    </span>
-                    {isSelected ? (
-                      <span className="text-xs text-primary">Selected</span>
-                    ) : null}
-                  </button>
-                );
-              })
-            )}
-          </div>
-          {multiple ? (
-            <p className="mt-2 border-t border-border pt-2 text-xs text-muted-foreground">
-              Click states to add or remove. Selections stay visible above.
-            </p>
-          ) : null}
+          <span className="min-w-0 flex-1 truncate font-medium">
+            {getStateLabel(selectedSingle)} ({selectedSingle})
+          </span>
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon-sm"
+            disabled={disabled}
+            className="hover:bg-secondary-foreground/10"
+            onClick={() => remove(selectedSingle)}
+            aria-label="Clear home state"
+          >
+            <HugeiconsIcon icon={Cancel01Icon} size={16} strokeWidth={1.8} />
+          </Button>
         </div>
       ) : null}
     </div>
