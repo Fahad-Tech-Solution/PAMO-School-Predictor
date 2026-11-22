@@ -13,11 +13,14 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import {
   Form,
+  FormControl,
+  FormDescription,
   FormField,
   FormItem,
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
+import { Input } from "@/components/ui/input";
 import type { Applicant } from "@/db/schema";
 import {
   applicantFormSchema,
@@ -35,6 +38,8 @@ export function ApplicantHomeStateForm({ applicant }: { applicant: Applicant }) 
     resolver: zodResolver(applicantFormSchema) as any,
     defaultValues: {
       homeState: applicant.homeState as ApplicantFormValues["homeState"],
+      lastName: applicant.lastName ?? "",
+      firstName: applicant.firstName ?? "",
     },
   });
 
@@ -52,6 +57,57 @@ export function ApplicantHomeStateForm({ applicant }: { applicant: Applicant }) 
         onSubmit={form.handleSubmit(onSubmit)}
         className="max-w-md space-y-4"
       >
+        <div className="grid gap-4 sm:grid-cols-2">
+          <FormField
+            control={form.control}
+            name="lastName"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Last name</FormLabel>
+                <FormControl>
+                  <Input
+                    autoComplete="family-name"
+                    placeholder="Optional"
+                    value={
+                      field.value === null || field.value === undefined
+                        ? ""
+                        : String(field.value)
+                    }
+                    onChange={field.onChange}
+                    onBlur={field.onBlur}
+                    name={field.name}
+                  />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          <FormField
+            control={form.control}
+            name="firstName"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>First name</FormLabel>
+                <FormControl>
+                  <Input
+                    autoComplete="given-name"
+                    placeholder="Optional"
+                    value={
+                      field.value === null || field.value === undefined
+                        ? ""
+                        : String(field.value)
+                    }
+                    onChange={field.onChange}
+                    onBlur={field.onBlur}
+                    name={field.name}
+                  />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        </div>
+
         <FormField
           control={form.control}
           name="homeState"
@@ -60,9 +116,13 @@ export function ApplicantHomeStateForm({ applicant }: { applicant: Applicant }) 
               <FormLabel>Home state</FormLabel>
               <StateCombobox
                 name="homeState"
-                value={field.value}
+                value={field.value as string}
                 onChange={field.onChange}
               />
+              <FormDescription>
+                Names are for admin lookup only — not used in statistics or the
+                predictor.
+              </FormDescription>
               <FormMessage />
             </FormItem>
           )}
@@ -85,7 +145,7 @@ export function ApplicantHomeStateForm({ applicant }: { applicant: Applicant }) 
         ) : null}
 
         <Button type="submit" disabled={pending}>
-          {pending ? "Saving…" : "Update home state"}
+          {pending ? "Saving…" : "Save applicant"}
         </Button>
       </form>
     </Form>

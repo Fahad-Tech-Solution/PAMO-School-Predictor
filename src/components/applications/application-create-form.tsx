@@ -19,6 +19,8 @@ import {
 
 const emptyDefaults: CreateApplicationWithApplicantValues = {
   homeState: "",
+  lastName: "",
+  firstName: "",
   schoolIds: [],
   schoolOutcomes: [],
   bcpGpa: "",
@@ -26,6 +28,10 @@ const emptyDefaults: CreateApplicationWithApplicantValues = {
   scienceGpa: "",
   pceHours: "",
   greScore: "",
+  interviewAt: "",
+  resultsAt: "",
+  waitlistedAt: "",
+  acceptedAt: "",
 };
 
 export function ApplicationCreateForm({

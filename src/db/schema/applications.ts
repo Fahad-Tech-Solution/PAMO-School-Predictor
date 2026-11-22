@@ -48,6 +48,14 @@ export const applications = pgTable(
 
     status: applicationStatusEnum("status"),
 
+    /** Interview day for this school cycle (date-only semantics). */
+    interviewAt: timestamp("interview_at", { withTimezone: true }),
+    /**
+     * When the school communicated the outcome of this interview cycle.
+     * Separate from waitlistedAt / acceptedAt status stamps.
+     */
+    resultsAt: timestamp("results_at", { withTimezone: true }),
+
     waitlistedAt: timestamp("waitlisted_at", { withTimezone: true }),
     acceptedAt: timestamp("accepted_at", { withTimezone: true }),
 
@@ -68,12 +76,23 @@ export const applications = pgTable(
     index("applications_bcp_gpa_idx").on(table.bcpGpa),
     index("applications_pce_hours_idx").on(table.pceHours),
     index("applications_gre_score_idx").on(table.greScore),
+    index("applications_interview_at_idx").on(table.interviewAt),
+    index("applications_results_at_idx").on(table.resultsAt),
     index("applications_created_at_idx").on(table.createdAt),
     index("applications_school_status_created_idx").on(
       table.schoolId,
       table.status,
       table.createdAt,
     ),
+    index("applications_school_interview_idx").on(
+      table.schoolId,
+      table.interviewAt,
+    ),
+    index("applications_school_results_idx").on(
+      table.schoolId,
+      table.resultsAt,
+    ),
+
     check(
       "applications_bcp_gpa_range",
       sql`${table.bcpGpa} IS NULL OR (${table.bcpGpa} >= 2.70 AND ${table.bcpGpa} <= 4.00)`,

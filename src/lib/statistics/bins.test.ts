@@ -5,11 +5,14 @@ import {
   buildGpaBins,
   buildGreBins,
   countAttempts,
+  countByMonth,
   countIntoBins,
   countOutcomes,
   countResidency,
+  formatMonthLabel,
   GPA_BINS,
   GRE_BINS,
+  monthKeyFromDate,
   outcomeLabelFromStatus,
   PCE_BINS,
   valueInBin,
@@ -115,6 +118,28 @@ describe("attempts and outcomes", () => {
     expect(countResidency(["IN_STATE", "OUT_OF_STATE", "IN_STATE"])).toEqual([
       { label: "In-state", count: 2 },
       { label: "Out-of-state", count: 1 },
+    ]);
+  });
+});
+
+describe("month date bins", () => {
+  it("keys and labels UTC months", () => {
+    expect(monthKeyFromDate(new Date("2025-10-19T12:00:00.000Z"))).toBe(
+      "2025-10",
+    );
+    expect(formatMonthLabel("2025-10")).toBe("Oct 2025");
+  });
+
+  it("fills contiguous months between first and last", () => {
+    const counts = countByMonth([
+      new Date("2025-10-19T12:00:00.000Z"),
+      new Date("2025-12-01T12:00:00.000Z"),
+      new Date("2025-10-30T12:00:00.000Z"),
+    ]);
+    expect(counts).toEqual([
+      { label: "Oct 2025", count: 2 },
+      { label: "Nov 2025", count: 0 },
+      { label: "Dec 2025", count: 1 },
     ]);
   });
 });

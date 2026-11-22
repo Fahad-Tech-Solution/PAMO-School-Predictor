@@ -6,6 +6,7 @@ import { ApplicationPagination } from "@/components/applications/application-pag
 import { RememberApplicationsReturn } from "@/components/applications/remember-applications-return";
 import { buttonVariants } from "@/components/ui/button";
 import { requireAuth } from "@/lib/auth/session";
+import { formatApplicantName } from "@/lib/applicants/name";
 import { residencyLabel } from "@/lib/applications/residency";
 import { statusLabel } from "@/lib/applications/status";
 import { getStateLabel, parseStateParam } from "@/lib/geo/us-states";
@@ -50,6 +51,7 @@ export default async function ApplicationsPage({
 }: {
   searchParams: Promise<{
     schoolId?: string;
+    lastName?: string;
     status?: string;
     attempt?: string;
     homeState?: string | string[];
@@ -61,6 +63,7 @@ export default async function ApplicationsPage({
   const params = await searchParams;
 
   const schoolId = params.schoolId?.trim() ?? "";
+  const lastName = params.lastName?.trim() ?? "";
   const homeStates = parseStateParam(params.homeState);
   const status = parseStatus(params.status);
   const attempt = parseAttempt(params.attempt);
@@ -70,6 +73,7 @@ export default async function ApplicationsPage({
   // One paginated DB query (+ cached COUNT). Never load all applications client-side.
   const result = await listApplications({
     schoolId: schoolId || undefined,
+    lastName: lastName || undefined,
     homeStates: homeStates.length > 0 ? homeStates : undefined,
     status,
     attempt,
@@ -79,6 +83,7 @@ export default async function ApplicationsPage({
 
   const filterParams = {
     schoolId: schoolId || undefined,
+    lastName: lastName || undefined,
     homeState: homeStates.length > 0 ? homeStates.join(",") : undefined,
     status: status === "all" ? undefined : status,
     attempt: attempt === "all" ? undefined : attempt,
@@ -94,8 +99,8 @@ export default async function ApplicationsPage({
         <div>
           <h2 className="text-lg font-semibold text-primary">Applications</h2>
           <p className="mt-1 text-sm text-muted-foreground">
-            Anonymous historical applications. Applicant identity is home state
-            only.
+            Search by last name to find a record. Names are for admin lookup
+            only — not used in statistics or the predictor.
           </p>
         </div>
         {user.role === "ADMIN" ? (
@@ -112,6 +117,7 @@ export default async function ApplicationsPage({
         <ApplicationFilters
           key={[
             schoolId,
+            lastName,
             status,
             attempt,
             homeStates.join(","),
@@ -119,6 +125,7 @@ export default async function ApplicationsPage({
           ].join("|")}
           schoolId={schoolId}
           schoolLabel={null}
+          lastName={lastName}
           status={status}
           attempt={attempt}
           homeStates={homeStates}
@@ -127,9 +134,10 @@ export default async function ApplicationsPage({
       </Suspense>
 
       <div className="overflow-x-auto rounded-lg border border-border bg-white">
-        <table className="w-full min-w-[800px] text-left text-sm">
+        <table className="w-full min-w-[900px] text-left text-sm">
           <thead className="border-b border-border bg-muted/40 text-xs uppercase tracking-wide text-muted-foreground">
             <tr>
+              <th className="px-4 py-3 font-medium">Applicant</th>
               <th className="px-4 py-3 font-medium">School</th>
               <th className="px-4 py-3 font-medium">Home state</th>
               <th className="px-4 py-3 font-medium">Residency</th>
@@ -143,52 +151,62 @@ export default async function ApplicationsPage({
             {result.items.length === 0 ? (
               <tr>
                 <td
-                  colSpan={7}
+                  colSpan={8}
                   className="px-4 py-10 text-center text-muted-foreground"
                 >
                   No applications match these filters.
                 </td>
               </tr>
             ) : (
-              result.items.map(({ application, applicant, school: s, residency: r }) => (
-                <tr
-                  key={application.id}
-                  className="border-b border-border last:border-0 hover:bg-muted/30"
-                >
-                  <td className="px-4 py-3">
-                    <Link
-                      href={`/applications/${application.id}`}
-                      className="font-medium text-primary hover:underline"
+              result.items.map(
+                ({ application, applicant, school: s, residency: r }) => {
+                  const name = formatApplicantName(applicant);
+                  return (
+                    <tr
+                      key={application.id}
+                      className="border-b border-border last:border-0 hover:bg-muted/30"
                     >
-                      {s.name}
-                    </Link>
-                    <div className="text-xs text-muted-foreground">
-                      {getStateLabel(s.state)}
-                    </div>
-                  </td>
-                  <td className="px-4 py-3">
-                    <Link
-                      href={`/applicants/${applicant.id}`}
-                      className="text-primary hover:underline"
-                    >
-                      {getStateLabel(applicant.homeState)}
-                    </Link>
-                  </td>
-                  <td className="px-4 py-3 text-muted-foreground">
-                    {residencyLabel(r)}
-                  </td>
-                  <td className="px-4 py-3">{application.applicationAttempt}</td>
-                  <td className="px-4 py-3">
-                    {statusLabel(application.status)}
-                  </td>
-                  <td className="px-4 py-3">
-                    {application.overallGpa ?? "—"}
-                  </td>
-                  <td className="px-4 py-3">
-                    {application.pceHours ?? "—"}
-                  </td>
-                </tr>
-              ))
+                      <td className="px-4 py-3">
+                        <Link
+                          href={`/applicants/${applicant.id}`}
+                          className="font-medium text-primary hover:underline"
+                        >
+                          {name ?? "—"}
+                        </Link>
+                      </td>
+                      <td className="px-4 py-3">
+                        <Link
+                          href={`/applications/${application.id}`}
+                          className="font-medium text-primary hover:underline"
+                        >
+                          {s.name}
+                        </Link>
+                        <div className="text-xs text-muted-foreground">
+                          {getStateLabel(s.state)}
+                        </div>
+                      </td>
+                      <td className="px-4 py-3 text-muted-foreground">
+                        {getStateLabel(applicant.homeState)}
+                      </td>
+                      <td className="px-4 py-3 text-muted-foreground">
+                        {residencyLabel(r)}
+                      </td>
+                      <td className="px-4 py-3">
+                        {application.applicationAttempt}
+                      </td>
+                      <td className="px-4 py-3">
+                        {statusLabel(application.status)}
+                      </td>
+                      <td className="px-4 py-3">
+                        {application.overallGpa ?? "—"}
+                      </td>
+                      <td className="px-4 py-3">
+                        {application.pceHours ?? "—"}
+                      </td>
+                    </tr>
+                  );
+                },
+              )
             )}
           </tbody>
         </table>

@@ -13,6 +13,7 @@ import {
 } from "@/lib/redis/cache";
 import {
   countAttempts,
+  countByMonth,
   countIntoBins,
   countOutcomes,
   countResidency,
@@ -21,6 +22,11 @@ import {
   PCE_BINS,
   type ChartDatum,
 } from "@/lib/statistics/bins";
+import {
+  computeWaitlistJourneyStats,
+  emptyWaitlistJourney,
+  type WaitlistJourneyStats,
+} from "@/lib/statistics/waitlist-journey";
 
 export type SchoolStatistics = {
   schoolId: string;
@@ -34,6 +40,9 @@ export type SchoolStatistics = {
   scienceGpa: ChartDatum[];
   pceHours: ChartDatum[];
   greScore: ChartDatum[];
+  interviewDates: ChartDatum[];
+  resultsDates: ChartDatum[];
+  waitlistJourney: WaitlistJourneyStats;
   /** Summary averages — null when no numeric values recorded. */
   averages: {
     bcpGpa: number | null;
@@ -100,6 +109,10 @@ async function computeSchoolStatistics(
       scienceGpa: applications.scienceGpa,
       pceHours: applications.pceHours,
       greScore: applications.greScore,
+      interviewAt: applications.interviewAt,
+      resultsAt: applications.resultsAt,
+      waitlistedAt: applications.waitlistedAt,
+      acceptedAt: applications.acceptedAt,
       homeState: applicants.homeState,
     })
     .from(applications)
@@ -120,6 +133,9 @@ async function computeSchoolStatistics(
     scienceGpa: countIntoBins([], GPA_BINS),
     pceHours: countIntoBins([], PCE_BINS),
     greScore: countIntoBins([], GRE_BINS),
+    interviewDates: [],
+    resultsDates: [],
+    waitlistJourney: emptyWaitlistJourney,
     averages: emptyAverages,
   };
 
@@ -148,6 +164,12 @@ async function computeSchoolStatistics(
   const greValues = rows
     .map((row) => row.greScore)
     .filter((n): n is number => n != null);
+  const interviewDates = rows
+    .map((row) => row.interviewAt)
+    .filter((d): d is Date => d != null);
+  const resultsDates = rows
+    .map((row) => row.resultsAt)
+    .filter((d): d is Date => d != null);
 
   return {
     schoolId,
@@ -161,6 +183,9 @@ async function computeSchoolStatistics(
     scienceGpa: countIntoBins(scienceValues, GPA_BINS),
     pceHours: countIntoBins(pceValues, PCE_BINS),
     greScore: countIntoBins(greValues, GRE_BINS),
+    interviewDates: countByMonth(interviewDates),
+    resultsDates: countByMonth(resultsDates),
+    waitlistJourney: computeWaitlistJourneyStats(rows),
     averages: {
       bcpGpa: average(bcpValues),
       overallGpa: average(overallValues),
@@ -179,6 +204,7 @@ async function computeSchoolStatistics(
 /**
  * Aggregate chart series for one school from historical applications.
  * Cached in Upstash Redis when configured. Null GPA/PCE/GRE omitted from distributions.
+ * Applicant names are never included in these aggregates.
  */
 export async function getSchoolStatistics(
   schoolId: string,

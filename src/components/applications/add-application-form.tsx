@@ -34,6 +34,10 @@ export function AddApplicationForm({ applicantId }: { applicantId: string }) {
       scienceGpa: "",
       pceHours: "",
       greScore: "",
+      interviewAt: "",
+      resultsAt: "",
+      waitlistedAt: "",
+      acceptedAt: "",
     },
   });
 

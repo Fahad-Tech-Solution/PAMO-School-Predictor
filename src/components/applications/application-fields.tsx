@@ -98,31 +98,84 @@ function SectionCard({
   );
 }
 
-function HomeStateField<T extends FieldValues>({
+function ApplicantIdentityFields<T extends FieldValues>({
   control,
 }: {
   control: Control<T>;
 }) {
   return (
-    <FormField
-      control={control}
-      name={"homeState" as Path<T>}
-      render={({ field }) => (
-        <FormItem>
-          <FormLabel>Applicant home state</FormLabel>
-          <StateCombobox
-            name="homeState"
-            value={field.value as string}
-            onChange={field.onChange}
-            placeholder="Select one state…"
-          />
-          <FormDescription>
-            Exactly one home state for this anonymous applicant.
-          </FormDescription>
-          <FormMessage />
-        </FormItem>
-      )}
-    />
+    <div className="space-y-4">
+      <div className="grid gap-4 sm:grid-cols-2">
+        <FormField
+          control={control}
+          name={"lastName" as Path<T>}
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Last name</FormLabel>
+              <FormControl>
+                <Input
+                  autoComplete="family-name"
+                  placeholder="Optional — for your search later"
+                  value={
+                    field.value === null || field.value === undefined
+                      ? ""
+                      : String(field.value)
+                  }
+                  onChange={field.onChange}
+                  onBlur={field.onBlur}
+                  name={field.name}
+                />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+        <FormField
+          control={control}
+          name={"firstName" as Path<T>}
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>First name</FormLabel>
+              <FormControl>
+                <Input
+                  autoComplete="given-name"
+                  placeholder="Optional"
+                  value={
+                    field.value === null || field.value === undefined
+                      ? ""
+                      : String(field.value)
+                  }
+                  onChange={field.onChange}
+                  onBlur={field.onBlur}
+                  name={field.name}
+                />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+      </div>
+      <FormField
+        control={control}
+        name={"homeState" as Path<T>}
+        render={({ field }) => (
+          <FormItem>
+            <FormLabel>Applicant home state</FormLabel>
+            <StateCombobox
+              name="homeState"
+              value={field.value as string}
+              onChange={field.onChange}
+              placeholder="Select one state…"
+            />
+            <FormDescription>
+              Used for in-state / out-of-state. Names are for admin lookup only —
+              not used in statistics or the predictor.
+            </FormDescription>
+            <FormMessage />
+          </FormItem>
+        )}
+      />
+    </div>
   );
 }
 
@@ -509,6 +562,82 @@ function StatusField<T extends FieldValues>({
   );
 }
 
+function DateField<T extends FieldValues>({
+  control,
+  name,
+  label,
+  description,
+}: {
+  control: Control<T>;
+  name: Path<T>;
+  label: string;
+  description?: string;
+}) {
+  return (
+    <FormField
+      control={control}
+      name={name}
+      render={({ field }) => (
+        <FormItem>
+          <FormLabel>{label}</FormLabel>
+          <FormControl>
+            <Input
+              type="date"
+              value={
+                field.value === null || field.value === undefined
+                  ? ""
+                  : String(field.value)
+              }
+              onChange={field.onChange}
+              onBlur={field.onBlur}
+              name={field.name}
+            />
+          </FormControl>
+          {description ? (
+            <FormDescription>{description}</FormDescription>
+          ) : null}
+          <FormMessage />
+        </FormItem>
+      )}
+    />
+  );
+}
+
+function TimelineFields<T extends FieldValues>({
+  control,
+}: {
+  control: Control<T>;
+}) {
+  return (
+    <div className="grid gap-4 sm:grid-cols-2">
+      <DateField
+        control={control}
+        name={"interviewAt" as Path<T>}
+        label="Interview date"
+        description="Optional. Day of the interview for this school cycle."
+      />
+      <DateField
+        control={control}
+        name={"resultsAt" as Path<T>}
+        label="Results date"
+        description="Optional. When the school communicated this cycle’s outcome (separate from waitlist/accepted stamps)."
+      />
+      <DateField
+        control={control}
+        name={"waitlistedAt" as Path<T>}
+        label="Waitlisted date"
+        description="Optional. Auto-fills when status becomes Waitlisted if left blank."
+      />
+      <DateField
+        control={control}
+        name={"acceptedAt" as Path<T>}
+        label="Accepted date"
+        description="Optional. Auto-fills when status becomes Accepted if left blank."
+      />
+    </div>
+  );
+}
+
 const EMPTY_SCHOOL_IDS: string[] = [];
 const EMPTY_LABELS: Record<string, string> = {};
 
@@ -681,10 +810,10 @@ export function ApplicationFields<T extends FieldValues>({
         <div className="grid gap-4 md:grid-cols-2">
           {includeHomeState ? (
             <SectionCard
-              title="Home state"
-              description="Used to derive in-state / out-of-state vs each school."
+              title="Applicant"
+              description="Optional name for your search later. Home state drives residency."
             >
-              <HomeStateField control={control} />
+              <ApplicantIdentityFields control={control} />
             </SectionCard>
           ) : null}
 
@@ -707,13 +836,20 @@ export function ApplicationFields<T extends FieldValues>({
         >
           {statusAttemptFields}
         </SectionCard>
+
+        <SectionCard
+          title="Interview & timeline"
+          description="Optional historical dates. Results date is separate from waitlisted/accepted stamps."
+        >
+          <TimelineFields control={control} />
+        </SectionCard>
       </div>
     );
   }
 
   return (
     <>
-      {includeHomeState ? <HomeStateField control={control} /> : null}
+      {includeHomeState ? <ApplicantIdentityFields control={control} /> : null}
       {schoolField}
       <GpaAndPceFields control={control} showGre={showGre} />
       {multiSchool ? (
@@ -726,6 +862,7 @@ export function ApplicationFields<T extends FieldValues>({
           <StatusField control={control} />
         </>
       )}
+      <TimelineFields control={control} />
     </>
   );
 }

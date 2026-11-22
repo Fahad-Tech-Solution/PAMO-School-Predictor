@@ -37,22 +37,29 @@ const fail = (
   fieldErrors,
 });
 
-function timestampsForStatusChange(options: {
+/**
+ * Resolve waitlisted/accepted stamps from form values, with auto-now only when
+ * transitioning into that status and the form date is blank.
+ * Preserves a prior waitlist stamp when accepting after waitlist if still blank.
+ */
+function resolveStatusDates(options: {
   nextStatus: ReturnType<typeof formValueToStatus>;
   previousStatus: (typeof applications.$inferSelect)["status"];
   previousWaitlistedAt: Date | null;
   previousAcceptedAt: Date | null;
+  providedWaitlistedAt: Date | null;
+  providedAcceptedAt: Date | null;
 }) {
   const now = new Date();
-  let waitlistedAt = options.previousWaitlistedAt;
-  let acceptedAt = options.previousAcceptedAt;
+  let waitlistedAt = options.providedWaitlistedAt;
+  let acceptedAt = options.providedAcceptedAt;
 
   if (
     options.nextStatus === "WAITLISTED" &&
     options.previousStatus !== "WAITLISTED" &&
     !waitlistedAt
   ) {
-    waitlistedAt = now;
+    waitlistedAt = options.previousWaitlistedAt ?? now;
   }
 
   if (
@@ -60,7 +67,15 @@ function timestampsForStatusChange(options: {
     options.previousStatus !== "ACCEPTED" &&
     !acceptedAt
   ) {
-    acceptedAt = now;
+    acceptedAt = options.previousAcceptedAt ?? now;
+  }
+
+  if (
+    options.nextStatus === "ACCEPTED" &&
+    !waitlistedAt &&
+    options.previousWaitlistedAt
+  ) {
+    waitlistedAt = options.previousWaitlistedAt;
   }
 
   return { waitlistedAt, acceptedAt };
@@ -107,7 +122,11 @@ export async function createApplicationWithApplicant(
   const db = createDb();
   const [applicant] = await db
     .insert(applicants)
-    .values({ homeState: parsed.data.homeState })
+    .values({
+      homeState: parsed.data.homeState,
+      lastName: parsed.data.lastName,
+      firstName: parsed.data.firstName,
+    })
     .returning();
 
   const createdApps = await db
@@ -116,11 +135,13 @@ export async function createApplicationWithApplicant(
       schoolIds.map((schoolId) => {
         const outcome = outcomesBySchool.get(schoolId)!;
         const status = formValueToStatus(outcome.status);
-        const { waitlistedAt, acceptedAt } = timestampsForStatusChange({
+        const { waitlistedAt, acceptedAt } = resolveStatusDates({
           nextStatus: status,
           previousStatus: null,
           previousWaitlistedAt: null,
           previousAcceptedAt: null,
+          providedWaitlistedAt: parsed.data.waitlistedAt,
+          providedAcceptedAt: parsed.data.acceptedAt,
         });
         const storeGre = greRequiredBySchool.get(schoolId) === true;
         return {
@@ -131,6 +152,8 @@ export async function createApplicationWithApplicant(
           scienceGpa: parsed.data.scienceGpa,
           pceHours: parsed.data.pceHours,
           greScore: storeGre ? parsed.data.greScore : null,
+          interviewAt: parsed.data.interviewAt,
+          resultsAt: parsed.data.resultsAt,
           applicationAttempt: outcome.applicationAttempt,
           status,
           waitlistedAt,
@@ -219,11 +242,13 @@ export async function createApplicationForApplicant(
       schoolIds.map((schoolId) => {
         const outcome = outcomesBySchool.get(schoolId)!;
         const status = formValueToStatus(outcome.status);
-        const { waitlistedAt, acceptedAt } = timestampsForStatusChange({
+        const { waitlistedAt, acceptedAt } = resolveStatusDates({
           nextStatus: status,
           previousStatus: null,
           previousWaitlistedAt: null,
           previousAcceptedAt: null,
+          providedWaitlistedAt: parsed.data.waitlistedAt,
+          providedAcceptedAt: parsed.data.acceptedAt,
         });
         const storeGre = greRequiredBySchool.get(schoolId) === true;
         return {
@@ -234,6 +259,8 @@ export async function createApplicationForApplicant(
           scienceGpa: parsed.data.scienceGpa,
           pceHours: parsed.data.pceHours,
           greScore: storeGre ? parsed.data.greScore : null,
+          interviewAt: parsed.data.interviewAt,
+          resultsAt: parsed.data.resultsAt,
           applicationAttempt: outcome.applicationAttempt,
           status,
           waitlistedAt,
@@ -303,11 +330,13 @@ export async function updateApplication(
   const storeGre = schoolRows[0]!.requiresGre;
 
   const status = formValueToStatus(parsed.data.status);
-  const { waitlistedAt, acceptedAt } = timestampsForStatusChange({
+  const { waitlistedAt, acceptedAt } = resolveStatusDates({
     nextStatus: status,
     previousStatus: existing.status,
     previousWaitlistedAt: existing.waitlistedAt,
     previousAcceptedAt: existing.acceptedAt,
+    providedWaitlistedAt: parsed.data.waitlistedAt,
+    providedAcceptedAt: parsed.data.acceptedAt,
   });
 
   const [updated] = await db
@@ -319,6 +348,8 @@ export async function updateApplication(
       scienceGpa: parsed.data.scienceGpa,
       pceHours: parsed.data.pceHours,
       greScore: storeGre ? parsed.data.greScore : null,
+      interviewAt: parsed.data.interviewAt,
+      resultsAt: parsed.data.resultsAt,
       applicationAttempt: parsed.data.applicationAttempt,
       status,
       waitlistedAt,
@@ -387,6 +418,8 @@ export async function updateApplicantHomeState(
     .update(applicants)
     .set({
       homeState: parsed.data.homeState,
+      lastName: parsed.data.lastName,
+      firstName: parsed.data.firstName,
       updatedAt: new Date(),
     })
     .where(eq(applicants.id, applicantId))

@@ -5,9 +5,9 @@ import { getRedis } from "@/lib/redis/client";
 export const CACHE_KEYS = {
   activeSchools: "pamo:cache:schools:active:v1",
   allSchools: "pamo:cache:schools:all:v1",
-  schoolStats: (schoolId: string) => `pamo:cache:school:stats:${schoolId}:v5`,
+  schoolStats: (schoolId: string) => `pamo:cache:school:stats:${schoolId}:v6`,
   dashboardCounts: "pamo:cache:dashboard:counts:v2",
-  dashboardRecentApplications: "pamo:cache:dashboard:recent-apps:v1",
+  dashboardRecentApplications: "pamo:cache:dashboard:recent-apps:v2",
   dashboardRecentSchools: "pamo:cache:dashboard:recent-schools:v1",
   applicationListCountEpoch: "pamo:cache:apps:list:count:epoch:v1",
   applicationListCount: (epoch: string | number, filterKey: string) =>

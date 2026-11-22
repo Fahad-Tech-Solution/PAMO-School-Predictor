@@ -33,6 +33,8 @@ export type DashboardRecentApplication = {
   schoolName: string;
   schoolState: string;
   homeState: string;
+  lastName: string | null;
+  firstName: string | null;
   residency: "IN_STATE" | "OUT_OF_STATE";
   status: ApplicationStatusValue;
   statusLabel: string;
@@ -128,6 +130,8 @@ async function fetchRecentApplications(
       schoolName: schools.name,
       schoolState: schools.state,
       homeState: applicants.homeState,
+      lastName: applicants.lastName,
+      firstName: applicants.firstName,
       status: applications.status,
       createdAt: applications.createdAt,
     })
@@ -143,6 +147,8 @@ async function fetchRecentApplications(
     schoolName: row.schoolName,
     schoolState: row.schoolState,
     homeState: row.homeState,
+    lastName: row.lastName,
+    firstName: row.firstName,
     residency: deriveResidency(row.homeState, row.schoolState),
     status: row.status,
     statusLabel: statusLabel(row.status),

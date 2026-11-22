@@ -5,6 +5,7 @@ import { AddApplicationForm } from "@/components/applications/add-application-fo
 import { ApplicantHomeStateForm } from "@/components/applications/applicant-home-state-form";
 import { BackToApplicationsLink } from "@/components/applications/back-to-applications-link";
 import { buttonVariants } from "@/components/ui/button";
+import { formatApplicantName } from "@/lib/applicants/name";
 import { residencyLabel } from "@/lib/applications/residency";
 import { statusLabel } from "@/lib/applications/status";
 import { getApplicantById } from "@/lib/applications/queries";
@@ -24,6 +25,7 @@ export async function ApplicantDetailContent({ id, isAdmin }: Props) {
   }
 
   const { applicant, applications } = data;
+  const displayName = formatApplicantName(applicant);
 
   return (
     <div className="space-y-6">
@@ -31,7 +33,7 @@ export async function ApplicantDetailContent({ id, isAdmin }: Props) {
         <div>
           <BackToApplicationsLink />
           <h2 className="mt-2 text-lg font-semibold text-primary">
-            Anonymous applicant
+            {displayName ?? "Applicant"}
           </h2>
           <p className="mt-1 text-sm text-muted-foreground">
             Home state: {getStateLabel(applicant.homeState)} ·{" "}
@@ -43,13 +45,23 @@ export async function ApplicantDetailContent({ id, isAdmin }: Props) {
 
       {isAdmin ? (
         <div className="rounded-lg border border-border bg-white p-4">
-          <h3 className="mb-4 text-sm font-semibold">Edit home state</h3>
+          <h3 className="mb-4 text-sm font-semibold">Edit applicant</h3>
           <ApplicantHomeStateForm applicant={applicant} />
         </div>
       ) : (
         <div className="rounded-lg border border-border bg-white p-4 text-sm">
-          <p className="text-muted-foreground">Home state</p>
-          <p className="font-medium">{getStateLabel(applicant.homeState)}</p>
+          <dl className="grid gap-3 sm:grid-cols-2">
+            <div>
+              <dt className="text-muted-foreground">Name</dt>
+              <dd className="font-medium">{displayName ?? "—"}</dd>
+            </div>
+            <div>
+              <dt className="text-muted-foreground">Home state</dt>
+              <dd className="font-medium">
+                {getStateLabel(applicant.homeState)}
+              </dd>
+            </div>
+          </dl>
         </div>
       )}
 

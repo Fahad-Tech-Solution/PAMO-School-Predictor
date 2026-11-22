@@ -13,6 +13,7 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Form } from "@/components/ui/form";
 import type { Application, School } from "@/db/schema";
+import { formatDateInput } from "@/lib/applications/dates";
 import { statusToFormValue } from "@/lib/applications/status";
 import { getStateLabel } from "@/lib/geo/us-states";
 import {
@@ -42,6 +43,10 @@ export function ApplicationEditForm({
       scienceGpa: application.scienceGpa ?? "",
       pceHours: application.pceHours ?? "",
       greScore: application.greScore ?? "",
+      interviewAt: formatDateInput(application.interviewAt),
+      resultsAt: formatDateInput(application.resultsAt),
+      waitlistedAt: formatDateInput(application.waitlistedAt),
+      acceptedAt: formatDateInput(application.acceptedAt),
       applicationAttempt: application.applicationAttempt,
       status: statusToFormValue(application.status),
     },

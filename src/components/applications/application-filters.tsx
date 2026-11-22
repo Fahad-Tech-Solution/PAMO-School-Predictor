@@ -7,6 +7,7 @@ import { signalNavigationStart } from "@/components/layout/navigation-progress";
 import { SchoolSelector } from "@/components/schools/school-selector";
 import { StateCombobox } from "@/components/schools/state-combobox";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
 const selectClassName =
@@ -17,6 +18,7 @@ const FILTER_DEBOUNCE_MS = 400;
 
 type FiltersState = {
   schoolId: string;
+  lastName: string;
   status: string;
   attempt: string;
   homeStates: string[];
@@ -26,6 +28,7 @@ type FiltersState = {
 function buildHref(filters: FiltersState): string {
   const params = new URLSearchParams();
   if (filters.schoolId) params.set("schoolId", filters.schoolId);
+  if (filters.lastName.trim()) params.set("lastName", filters.lastName.trim());
   if (filters.homeStates.length > 0) {
     params.set("homeState", filters.homeStates.join(","));
   }
@@ -45,6 +48,7 @@ function buildHref(filters: FiltersState): string {
 function sameFilters(a: FiltersState, b: FiltersState): boolean {
   return (
     a.schoolId === b.schoolId &&
+    a.lastName.trim().toLowerCase() === b.lastName.trim().toLowerCase() &&
     a.status === b.status &&
     a.attempt === b.attempt &&
     a.residency === b.residency &&
@@ -54,6 +58,7 @@ function sameFilters(a: FiltersState, b: FiltersState): boolean {
 
 function filtersFromProps(props: {
   schoolId: string;
+  lastName: string;
   status: string;
   attempt: string;
   homeStates: string[];
@@ -61,6 +66,7 @@ function filtersFromProps(props: {
 }): FiltersState {
   return {
     schoolId: props.schoolId,
+    lastName: props.lastName,
     status: props.status,
     attempt: props.attempt,
     homeStates: props.homeStates,
@@ -71,6 +77,7 @@ function filtersFromProps(props: {
 export function ApplicationFilters({
   schoolId,
   schoolLabel,
+  lastName,
   status,
   attempt,
   homeStates,
@@ -78,6 +85,7 @@ export function ApplicationFilters({
 }: {
   schoolId: string;
   schoolLabel: string | null;
+  lastName: string;
   status: string;
   attempt: string;
   homeStates: string[];
@@ -87,6 +95,7 @@ export function ApplicationFilters({
   const [pending, startTransition] = useTransition();
   const initial = filtersFromProps({
     schoolId,
+    lastName,
     status,
     attempt,
     homeStates,
@@ -115,6 +124,7 @@ export function ApplicationFilters({
   function reset() {
     const empty: FiltersState = {
       schoolId: "",
+      lastName: "",
       status: "all",
       attempt: "all",
       homeStates: [],
@@ -129,84 +139,101 @@ export function ApplicationFilters({
   }
 
   return (
-    <div className="grid gap-3 rounded-lg border border-border bg-white p-4 md:grid-cols-3 lg:grid-cols-6">
-      <div className="space-y-1.5 lg:col-span-2">
-        <Label>School</Label>
-        <SchoolSelector
-          name="schoolId"
-          label=""
-          value={draft.schoolId || null}
-          defaultLabel={schoolLabel}
-          includeInactive
-          onChange={(id) =>
-            setDraft((prev) => ({ ...prev, schoolId: id ?? "" }))
-          }
-        />
+    <div className="space-y-3 rounded-lg border border-border bg-white p-4">
+      <div className="grid gap-3 md:grid-cols-2">
+        <div className="space-y-1.5">
+          <Label>School</Label>
+          <SchoolSelector
+            name="schoolId"
+            label=""
+            value={draft.schoolId || null}
+            defaultLabel={schoolLabel}
+            includeInactive
+            onChange={(id) =>
+              setDraft((prev) => ({ ...prev, schoolId: id ?? "" }))
+            }
+          />
+        </div>
+        <div className="space-y-1.5">
+          <Label htmlFor="lastName">Last name</Label>
+          <Input
+            id="lastName"
+            value={draft.lastName}
+            placeholder="Search by last name…"
+            onChange={(e) =>
+              setDraft((prev) => ({ ...prev, lastName: e.target.value }))
+            }
+          />
+        </div>
       </div>
-      <div className="space-y-1.5 lg:col-span-2">
-        <Label>Home states</Label>
-        <StateCombobox
-          multiple
-          name="homeState"
-          value={draft.homeStates}
-          onChange={(codes) =>
-            setDraft((prev) => ({ ...prev, homeStates: codes }))
-          }
-          placeholder="Select one or more states"
-        />
+
+      <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-4">
+        <div className="space-y-1.5">
+          <Label>Home states</Label>
+          <StateCombobox
+            multiple
+            name="homeState"
+            value={draft.homeStates}
+            onChange={(codes) =>
+              setDraft((prev) => ({ ...prev, homeStates: codes }))
+            }
+            placeholder="Select one or more states"
+          />
+        </div>
+        <div className="space-y-1.5">
+          <Label htmlFor="status">Status</Label>
+          <select
+            id="status"
+            value={draft.status}
+            onChange={(e) =>
+              setDraft((prev) => ({ ...prev, status: e.target.value }))
+            }
+            className={selectClassName}
+          >
+            <option value="all">All</option>
+            <option value="UNKNOWN">Unknown</option>
+            <option value="ACCEPTED">Accepted</option>
+            <option value="NOT_ACCEPTED">Not accepted</option>
+            <option value="WAITLISTED">Waitlisted</option>
+          </select>
+        </div>
+        <div className="space-y-1.5">
+          <Label htmlFor="attempt">Attempt</Label>
+          <select
+            id="attempt"
+            value={draft.attempt}
+            onChange={(e) =>
+              setDraft((prev) => ({ ...prev, attempt: e.target.value }))
+            }
+            className={selectClassName}
+          >
+            <option value="all">All</option>
+            <option value="1">1st</option>
+            <option value="2">2nd</option>
+            <option value="3">3rd</option>
+            <option value="4">4th</option>
+            <option value="5">5th</option>
+            <option value="6plus">6+</option>
+          </select>
+        </div>
+        <div className="space-y-1.5">
+          <Label htmlFor="residency">Residency</Label>
+          <select
+            id="residency"
+            value={draft.residency}
+            onChange={(e) =>
+              setDraft((prev) => ({ ...prev, residency: e.target.value }))
+            }
+            className={selectClassName}
+          >
+            <option value="all">All</option>
+            <option value="IN_STATE">In-state</option>
+            <option value="OUT_OF_STATE">Out-of-state</option>
+          </select>
+        </div>
       </div>
-      <div className="space-y-1.5">
-        <Label htmlFor="status">Status</Label>
-        <select
-          id="status"
-          value={draft.status}
-          onChange={(e) =>
-            setDraft((prev) => ({ ...prev, status: e.target.value }))
-          }
-          className={selectClassName}
-        >
-          <option value="all">All</option>
-          <option value="UNKNOWN">Unknown</option>
-          <option value="ACCEPTED">Accepted</option>
-          <option value="NOT_ACCEPTED">Not accepted</option>
-          <option value="WAITLISTED">Waitlisted</option>
-        </select>
-      </div>
-      <div className="space-y-1.5">
-        <Label htmlFor="attempt">Attempt</Label>
-        <select
-          id="attempt"
-          value={draft.attempt}
-          onChange={(e) =>
-            setDraft((prev) => ({ ...prev, attempt: e.target.value }))
-          }
-          className={selectClassName}
-        >
-          <option value="all">All</option>
-          <option value="1">1st</option>
-          <option value="2">2nd</option>
-          <option value="3">3rd</option>
-          <option value="4">4th</option>
-          <option value="5">5th</option>
-          <option value="6plus">6+</option>
-        </select>
-      </div>
-      <div className="space-y-1.5">
-        <Label htmlFor="residency">Residency</Label>
-        <select
-          id="residency"
-          value={draft.residency}
-          onChange={(e) =>
-            setDraft((prev) => ({ ...prev, residency: e.target.value }))
-          }
-          className={selectClassName}
-        >
-          <option value="all">All</option>
-          <option value="IN_STATE">In-state</option>
-          <option value="OUT_OF_STATE">Out-of-state</option>
-        </select>
-      </div>
-      <div className="flex flex-wrap items-end gap-2 md:col-span-3 lg:col-span-6">
+
+      <div className="flex flex-wrap items-end gap-2">
         <Button type="button" variant="outline" disabled={pending} onClick={reset}>
           Reset
         </Button>

@@ -1,6 +1,8 @@
 import { z } from "zod";
 
+import { parseDateOnlyInput } from "@/lib/applications/dates";
 import { US_STATE_CODES } from "@/lib/geo/us-states";
+import { applicantNameFieldsSchema } from "@/lib/validation/applicant";
 
 function optionalGpa(value: unknown, ctx: z.RefinementCtx) {
   if (value === null || value === undefined) return null;
@@ -62,6 +64,21 @@ function optionalGre(value: unknown, ctx: z.RefinementCtx) {
   return num;
 }
 
+function optionalDateOnly(value: unknown, ctx: z.RefinementCtx) {
+  if (value === null || value === undefined) return null;
+  const raw = String(value).trim();
+  if (!raw) return null;
+  const parsed = parseDateOnlyInput(raw);
+  if (!parsed) {
+    ctx.addIssue({
+      code: "custom",
+      message: "Enter a valid date.",
+    });
+    return z.NEVER;
+  }
+  return parsed;
+}
+
 export const applicationStatusValues = [
   "UNKNOWN",
   "ACCEPTED",
@@ -77,6 +94,18 @@ const academicFields = {
   greScore: z.any().transform(optionalGre),
 };
 
+/** Shared interview/results dates (create + edit). */
+const interviewResultsFields = {
+  interviewAt: z.any().optional().transform(optionalDateOnly),
+  resultsAt: z.any().optional().transform(optionalDateOnly),
+};
+
+/** Editable status timeline stamps (create + edit; auto-filled when blank on status change). */
+const statusDateFields = {
+  waitlistedAt: z.any().optional().transform(optionalDateOnly),
+  acceptedAt: z.any().optional().transform(optionalDateOnly),
+};
+
 const attemptAndStatusFields = {
   applicationAttempt: z.coerce
     .number()
@@ -85,17 +114,50 @@ const attemptAndStatusFields = {
   status: z.enum(applicationStatusValues),
 };
 
+function refineTimelineOrder(
+  data: {
+    interviewAt: Date | null;
+    resultsAt: Date | null;
+    waitlistedAt?: Date | null;
+    acceptedAt?: Date | null;
+  },
+  ctx: z.RefinementCtx,
+) {
+  if (data.interviewAt && data.resultsAt && data.interviewAt > data.resultsAt) {
+    ctx.addIssue({
+      code: "custom",
+      path: ["resultsAt"],
+      message: "Results date should be on or after the interview date.",
+    });
+  }
+  if (
+    data.waitlistedAt &&
+    data.acceptedAt &&
+    data.waitlistedAt > data.acceptedAt
+  ) {
+    ctx.addIssue({
+      code: "custom",
+      path: ["acceptedAt"],
+      message: "Accepted date should be on or after the waitlisted date.",
+    });
+  }
+}
+
 export const schoolOutcomeSchema = z.object({
   schoolId: z.string().uuid(),
   ...attemptAndStatusFields,
 });
 
-/** Single-school fields (edit / legacy). */
-export const applicationFieldsSchema = z.object({
-  schoolId: z.string().uuid("Select a school."),
-  ...academicFields,
-  ...attemptAndStatusFields,
-});
+/** Single-school fields (edit). */
+export const applicationFieldsSchema = z
+  .object({
+    schoolId: z.string().uuid("Select a school."),
+    ...academicFields,
+    ...interviewResultsFields,
+    ...statusDateFields,
+    ...attemptAndStatusFields,
+  })
+  .superRefine(refineTimelineOrder);
 
 /** Create flows: one or more schools → one application per school, with per-school status/attempt. */
 export const multiSchoolApplicationFieldsSchema = z
@@ -105,8 +167,12 @@ export const multiSchoolApplicationFieldsSchema = z
       .min(1, "Select at least one school."),
     schoolOutcomes: z.array(schoolOutcomeSchema),
     ...academicFields,
+    ...interviewResultsFields,
+    ...statusDateFields,
   })
   .superRefine((data, ctx) => {
+    refineTimelineOrder(data, ctx);
+
     const selected = [...new Set(data.schoolIds)];
     const outcomeIds = data.schoolOutcomes.map((row) => row.schoolId);
     const outcomeSet = new Set(outcomeIds);
@@ -134,15 +200,17 @@ export const multiSchoolApplicationFieldsSchema = z
 
 export const createApplicationWithApplicantSchema =
   multiSchoolApplicationFieldsSchema.and(
-    z.object({
-      homeState: z
-        .string()
-        .refine(
-          (value): value is (typeof US_STATE_CODES)[number] =>
-            (US_STATE_CODES as readonly string[]).includes(value),
-          "Select a valid US state or territory.",
-        ),
-    }),
+    z
+      .object({
+        homeState: z
+          .string()
+          .refine(
+            (value): value is (typeof US_STATE_CODES)[number] =>
+              (US_STATE_CODES as readonly string[]).includes(value),
+            "Select a valid US state or territory.",
+          ),
+      })
+      .and(applicantNameFieldsSchema),
   );
 
 export const createApplicationForApplicantSchema =

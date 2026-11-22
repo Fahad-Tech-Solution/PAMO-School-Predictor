@@ -69,12 +69,56 @@ describe("applicationFieldsSchema", () => {
     });
     expect(high.success).toBe(false);
   });
+
+  it("accepts interview/results/waitlist/accepted dates and rejects inverted order", () => {
+    const ok = applicationFieldsSchema.safeParse({
+      schoolId,
+      bcpGpa: "",
+      overallGpa: "",
+      scienceGpa: "",
+      pceHours: "",
+      greScore: "",
+      interviewAt: "2025-10-19",
+      resultsAt: "2025-10-30",
+      waitlistedAt: "2025-10-30",
+      acceptedAt: "2026-08-13",
+      applicationAttempt: 1,
+      status: "ACCEPTED",
+    });
+    expect(ok.success).toBe(true);
+    if (ok.success) {
+      expect(ok.data.interviewAt?.toISOString()).toBe(
+        "2025-10-19T12:00:00.000Z",
+      );
+      expect(ok.data.acceptedAt?.toISOString()).toBe(
+        "2026-08-13T12:00:00.000Z",
+      );
+    }
+
+    const inverted = applicationFieldsSchema.safeParse({
+      schoolId,
+      bcpGpa: "",
+      overallGpa: "",
+      scienceGpa: "",
+      pceHours: "",
+      greScore: "",
+      interviewAt: "2025-10-30",
+      resultsAt: "2025-10-19",
+      waitlistedAt: "",
+      acceptedAt: "",
+      applicationAttempt: 1,
+      status: "UNKNOWN",
+    });
+    expect(inverted.success).toBe(false);
+  });
 });
 
 describe("createApplicationWithApplicantSchema", () => {
   it("requires home state and at least one school", () => {
     const ok = createApplicationWithApplicantSchema.safeParse({
       homeState: "TX",
+      lastName: "Nguyen",
+      firstName: "Alex",
       schoolIds: [schoolId],
       schoolOutcomes: [
         {
@@ -90,9 +134,15 @@ describe("createApplicationWithApplicantSchema", () => {
       greScore: "",
     });
     expect(ok.success).toBe(true);
+    if (ok.success) {
+      expect(ok.data.lastName).toBe("Nguyen");
+      expect(ok.data.firstName).toBe("Alex");
+    }
 
     const missingState = createApplicationWithApplicantSchema.safeParse({
       homeState: "",
+      lastName: "",
+      firstName: "",
       schoolIds: [schoolId],
       schoolOutcomes: [
         {
@@ -113,6 +163,8 @@ describe("createApplicationWithApplicantSchema", () => {
   it("requires per-school status and attempt for each selected school", () => {
     const ok = createApplicationWithApplicantSchema.safeParse({
       homeState: "CA",
+      lastName: "",
+      firstName: "",
       schoolIds: [schoolId, schoolIdB],
       schoolOutcomes: [
         { schoolId, applicationAttempt: 1, status: "ACCEPTED" },
@@ -128,6 +180,8 @@ describe("createApplicationWithApplicantSchema", () => {
 
     const missingOutcome = createApplicationWithApplicantSchema.safeParse({
       homeState: "CA",
+      lastName: "Lee",
+      firstName: "Sam",
       schoolIds: [schoolId, schoolIdB],
       schoolOutcomes: [
         { schoolId, applicationAttempt: 1, status: "ACCEPTED" },

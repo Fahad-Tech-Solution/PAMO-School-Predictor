@@ -206,3 +206,106 @@ export function countResidency(
     { label: "Out-of-state", count: outOfState },
   ];
 }
+
+/** Max contiguous months before falling back to sparse (count-only) months. */
+export const DATE_MONTH_CONTIGUOUS_CAP = 48;
+
+const MONTH_SHORT = [
+  "Jan",
+  "Feb",
+  "Mar",
+  "Apr",
+  "May",
+  "Jun",
+  "Jul",
+  "Aug",
+  "Sep",
+  "Oct",
+  "Nov",
+  "Dec",
+] as const;
+
+/** UTC year-month key (`YYYY-MM`) for date-only timestamps. */
+export function monthKeyFromDate(value: Date): string {
+  const year = value.getUTCFullYear();
+  const month = String(value.getUTCMonth() + 1).padStart(2, "0");
+  return `${year}-${month}`;
+}
+
+export function formatMonthLabel(key: string): string {
+  const [yearPart, monthPart] = key.split("-");
+  const year = Number(yearPart);
+  const monthIndex = Number(monthPart) - 1;
+  if (!Number.isFinite(year) || monthIndex < 0 || monthIndex > 11) return key;
+  return `${MONTH_SHORT[monthIndex]} ${year}`;
+}
+
+function parseMonthKey(key: string): { year: number; monthIndex: number } | null {
+  const match = /^(\d{4})-(\d{2})$/.exec(key);
+  if (!match) return null;
+  const year = Number(match[1]);
+  const monthIndex = Number(match[2]) - 1;
+  if (!Number.isFinite(year) || monthIndex < 0 || monthIndex > 11) return null;
+  return { year, monthIndex };
+}
+
+function compareMonthKeys(a: string, b: string): number {
+  return a.localeCompare(b);
+}
+
+function* iterateMonthKeys(start: string, end: string): Generator<string> {
+  const from = parseMonthKey(start);
+  const to = parseMonthKey(end);
+  if (!from || !to) return;
+
+  let year = from.year;
+  let monthIndex = from.monthIndex;
+  while (year < to.year || (year === to.year && monthIndex <= to.monthIndex)) {
+    yield `${year}-${String(monthIndex + 1).padStart(2, "0")}`;
+    monthIndex += 1;
+    if (monthIndex > 11) {
+      monthIndex = 0;
+      year += 1;
+    }
+  }
+}
+
+function monthSpanCount(start: string, end: string): number {
+  const from = parseMonthKey(start);
+  const to = parseMonthKey(end);
+  if (!from || !to) return 0;
+  return (to.year - from.year) * 12 + (to.monthIndex - from.monthIndex) + 1;
+}
+
+/**
+ * Count dates by UTC calendar month.
+ * Fills empty months between min and max when the span is within
+ * {@link DATE_MONTH_CONTIGUOUS_CAP}; otherwise returns sparse months with counts.
+ */
+export function countByMonth(dates: Date[]): ChartDatum[] {
+  if (dates.length === 0) return [];
+
+  const counts = new Map<string, number>();
+  for (const date of dates) {
+    if (Number.isNaN(date.getTime())) continue;
+    const key = monthKeyFromDate(date);
+    counts.set(key, (counts.get(key) ?? 0) + 1);
+  }
+
+  if (counts.size === 0) return [];
+
+  const keys = [...counts.keys()].sort(compareMonthKeys);
+  const first = keys[0]!;
+  const last = keys[keys.length - 1]!;
+  const span = monthSpanCount(first, last);
+
+  const orderedKeys =
+    span > 0 && span <= DATE_MONTH_CONTIGUOUS_CAP
+      ? [...iterateMonthKeys(first, last)]
+      : keys;
+
+  return orderedKeys.map((key) => ({
+    label: formatMonthLabel(key),
+    count: counts.get(key) ?? 0,
+  }));
+}

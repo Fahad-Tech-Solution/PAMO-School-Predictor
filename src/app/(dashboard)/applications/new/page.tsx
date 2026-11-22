@@ -28,8 +28,9 @@ export default async function NewApplicationPage({
           Add application
         </h2>
         <p className="mt-1 text-sm text-muted-foreground">
-          Creates an anonymous applicant (home state) and the first application
-          record.
+          Creates an applicant (optional name + home state) and the first
+          application record. Names are for your search later — not used in
+          statistics or the predictor.
         </p>
       </div>
 

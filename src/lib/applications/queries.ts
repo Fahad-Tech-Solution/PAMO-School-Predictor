@@ -40,6 +40,8 @@ export type ApplicationListFilters = {
   attempt?: "all" | "1" | "2" | "3" | "4" | "5" | "6plus";
   homeStates?: string[];
   residency?: "all" | "IN_STATE" | "OUT_OF_STATE";
+  /** Case-insensitive partial match on applicant last name (admin lookup). */
+  lastName?: string;
   page?: number;
   pageSize?: number;
 };
@@ -94,6 +96,18 @@ function buildWhere(filters: ApplicationListFilters): SQL | undefined {
     clauses.push(sql`${applicants.homeState} <> ${schools.state}`);
   }
 
+  const lastName = filters.lastName?.trim();
+  if (lastName) {
+    const escaped = lastName
+      .toLowerCase()
+      .replace(/\\/g, "\\\\")
+      .replace(/%/g, "\\%")
+      .replace(/_/g, "\\_");
+    clauses.push(
+      sql`lower(coalesce(${applicants.lastName}, '')) like ${`%${escaped}%`} escape '\\'`,
+    );
+  }
+
   if (clauses.length === 0) return undefined;
   if (clauses.length === 1) return clauses[0];
   return and(...clauses);
@@ -106,6 +120,7 @@ function applicationListFilterKey(filters: ApplicationListFilters): string {
     filters.attempt ?? "all",
     (filters.homeStates ?? []).slice().sort().join(","),
     filters.residency ?? "all",
+    filters.lastName?.trim().toLowerCase() ?? "",
   ].join("|");
 }
 

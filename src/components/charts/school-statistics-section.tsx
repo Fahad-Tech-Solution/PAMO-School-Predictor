@@ -1,10 +1,13 @@
 import { AttemptsBarChart } from "@/components/charts/attempts-bar-chart";
+import { DateMonthBarChart } from "@/components/charts/date-month-bar-chart";
 import { GpaDistributionChart } from "@/components/charts/gpa-distribution-chart";
 import { GreDistributionChart } from "@/components/charts/gre-distribution-chart";
 import { OutcomeBarChart } from "@/components/charts/outcome-bar-chart";
 import { PceDistributionChart } from "@/components/charts/pce-distribution-chart";
 import { ResidencyPieChart } from "@/components/charts/residency-pie-chart";
+import { WaitlistJourneyCard } from "@/components/charts/waitlist-journey-card";
 import type { SchoolStatistics } from "@/lib/statistics/school-stats";
+import { emptyWaitlistJourney } from "@/lib/statistics/waitlist-journey";
 
 type Props = {
   stats: SchoolStatistics;
@@ -23,6 +26,9 @@ export function SchoolStatisticsSection({ stats }: Props) {
     pceHoursN: 0,
     greScoreN: 0,
   };
+  const waitlistJourney = stats.waitlistJourney ?? emptyWaitlistJourney;
+  const interviewDates = stats.interviewDates ?? [];
+  const resultsDates = stats.resultsDates ?? [];
 
   return (
     <section className="space-y-4">
@@ -31,7 +37,8 @@ export function SchoolStatisticsSection({ stats }: Props) {
         <p className="mt-0.5 text-xs text-muted-foreground">
           Historical applications for this school ({stats.totalApplications}{" "}
           total). Charts include counts, percentages, and averages where
-          available — not causal relationships.
+          available — not causal relationships. Applicant names are never
+          included.
         </p>
       </div>
 
@@ -44,7 +51,22 @@ export function SchoolStatisticsSection({ stats }: Props) {
         <div className="grid gap-4 lg:grid-cols-2">
           <ResidencyPieChart data={stats.residency} />
           <OutcomeBarChart data={stats.outcomes} />
+          <WaitlistJourneyCard stats={waitlistJourney} />
           <AttemptsBarChart data={stats.attempts} />
+          <DateMonthBarChart
+            title="Interview dates"
+            description="When interviews happened (by month)."
+            data={interviewDates}
+            emptyMessage="No interview dates recorded yet."
+            barColor="var(--chart-1)"
+          />
+          <DateMonthBarChart
+            title="Results dates"
+            description="When interview-cycle results were communicated (by month)."
+            data={resultsDates}
+            emptyMessage="No results dates recorded yet."
+            barColor="var(--chart-3)"
+          />
           <PceDistributionChart
             data={stats.pceHours}
             averageHours={averages.pceHours}
