@@ -228,7 +228,7 @@ The enhancement is successful when you can:
 
 **Step 3 status:** Implemented (waitlist → acceptance journey labeling + school conversion/avg-days metrics + interview/results month charts). Track manual QA in `docs/test-records-step3.md`.
 
-**Step 4 status:** In progress (full QA). Master checklist + automated gate results in `docs/test-records-step4.md`. Automated: typecheck + 53 unit tests pass; eslint has pre-existing `set-state-in-effect` failures unrelated to this package. Manual E2E Pass? columns still to be filled in-app.
+**Step 4 status:** In progress (full QA). Master checklist + automated gate results in `docs/test-records-step4.md`. Automated: typecheck + unit tests pass; eslint 0 errors (`set-state-in-effect` cleared; 1 logout `location.assign` warning remains). Manual E2E Pass? columns still to be filled in-app.
 
 ---
 

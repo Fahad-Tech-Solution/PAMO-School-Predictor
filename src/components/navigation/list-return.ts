@@ -3,6 +3,9 @@
 export const APPLICATIONS_RETURN_KEY = "pamo:applications:return";
 export const SCHOOLS_RETURN_KEY = "pamo:schools:return";
 
+/** Same-tab notify for `useSyncExternalStore` subscribers (storage events are cross-tab only). */
+export const LIST_RETURN_CHANGE_EVENT = "pamo:list-return-change";
+
 function isListHref(basePath: string, href: string): boolean {
   if (href === basePath) return true;
   return href.startsWith(`${basePath}?`);
@@ -10,6 +13,11 @@ function isListHref(basePath: string, href: string): boolean {
 
 function fromListFlagKey(storageKey: string): string {
   return `${storageKey}:from-list`;
+}
+
+function notifyListReturnChange(): void {
+  if (typeof window === "undefined") return;
+  window.dispatchEvent(new Event(LIST_RETURN_CHANGE_EVENT));
 }
 
 export function readListReturnHref(basePath: string, storageKey: string): string {
@@ -34,9 +42,21 @@ export function writeListReturnHref(
   if (!isListHref(basePath, href)) return;
   try {
     sessionStorage.setItem(storageKey, href);
+    notifyListReturnChange();
   } catch {
     // ignore
   }
+}
+
+/** Subscribe to same-tab writes and cross-tab `storage` updates. */
+export function subscribeListReturn(onStoreChange: () => void): () => void {
+  if (typeof window === "undefined") return () => {};
+  window.addEventListener(LIST_RETURN_CHANGE_EVENT, onStoreChange);
+  window.addEventListener("storage", onStoreChange);
+  return () => {
+    window.removeEventListener(LIST_RETURN_CHANGE_EVENT, onStoreChange);
+    window.removeEventListener("storage", onStoreChange);
+  };
 }
 
 /** Mark that the user is navigating from this list into a child route. */

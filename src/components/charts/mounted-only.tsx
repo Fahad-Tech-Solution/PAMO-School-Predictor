@@ -1,6 +1,8 @@
 "use client";
 
-import { useEffect, useState, type ReactNode } from "react";
+import type { ReactNode } from "react";
+
+import { useIsClient } from "@/lib/use-is-client";
 
 /**
  * Skip SSR for children that measure the DOM (e.g. Recharts ResponsiveContainer).
@@ -13,11 +15,7 @@ export function MountedOnly({
   children: ReactNode;
   fallback?: ReactNode;
 }) {
-  const [mounted, setMounted] = useState(false);
-
-  useEffect(() => {
-    setMounted(true);
-  }, []);
+  const mounted = useIsClient();
 
   if (!mounted) return fallback;
   return children;

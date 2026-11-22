@@ -121,17 +121,15 @@ export function SchoolsDirectory({
   }, [filtered, safePage]);
 
   // Keep URL shareable without triggering a server round-trip.
+  // Use safePage so an out-of-range page state never leaks into the URL.
   useEffect(() => {
     syncUrl({ q, states, gre, status, page: safePage });
   }, [q, states, gre, status, safePage]);
 
-  // If filters shrink the result set, snap page back into range.
-  useEffect(() => {
-    if (page !== safePage) setPage(safePage);
-  }, [page, safePage]);
-
   function setFilterPage(next: number) {
-    setPage(Math.max(1, next));
+    // Clamp against current totalPages; rendering already uses safePage when
+    // filters shrink results, so no corrective setState-in-effect is needed.
+    setPage(Math.min(totalPages, Math.max(1, next)));
   }
 
   function updateFilters(

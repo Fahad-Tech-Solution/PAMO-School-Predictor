@@ -20,6 +20,7 @@ import {
 } from "@/components/ui/sidebar";
 import type { AppUser } from "@/lib/auth/types";
 import { createClient } from "@/lib/supabase/client";
+import { useIsClient } from "@/lib/use-is-client";
 import { cn } from "@/lib/utils";
 
 function initialsFor(user: AppUser): string {
@@ -36,11 +37,7 @@ function initialsFor(user: AppUser): string {
 
 /** Full-viewport blocker shown the instant logout starts. */
 function LogoutOverlay({ active }: { active: boolean }) {
-  const [mounted, setMounted] = useState(false);
-
-  useEffect(() => {
-    setMounted(true);
-  }, []);
+  const mounted = useIsClient();
 
   useEffect(() => {
     if (!active) return;

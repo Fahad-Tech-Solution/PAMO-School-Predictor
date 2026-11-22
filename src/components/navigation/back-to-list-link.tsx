@@ -2,11 +2,12 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useEffect, useState, type ReactNode } from "react";
+import { useSyncExternalStore, type ReactNode } from "react";
 
 import {
   readListReturnHref,
   shouldUseHistoryBackToList,
+  subscribeListReturn,
 } from "@/components/navigation/list-return";
 import { cn } from "@/lib/utils";
 
@@ -28,11 +29,11 @@ export function BackToListLink({
   children,
 }: Props) {
   const router = useRouter();
-  const [href, setHref] = useState(basePath);
-
-  useEffect(() => {
-    setHref(readListReturnHref(basePath, storageKey));
-  }, [basePath, storageKey]);
+  const href = useSyncExternalStore(
+    subscribeListReturn,
+    () => readListReturnHref(basePath, storageKey),
+    () => basePath,
+  );
 
   return (
     <Link

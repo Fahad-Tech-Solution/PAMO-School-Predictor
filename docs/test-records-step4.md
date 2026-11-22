@@ -9,7 +9,7 @@ Use fake names. Fill Pass? as you walk the app; link App/Applicant IDs from Step
 |-------|--------|-------|
 | `npm run typecheck` | Pass | |
 | `npm run test` | Pass — 12 files / 53 tests | Includes name, dates, journey, waitlist stats, bins, validation |
-| `npm run lint` | Fail (pre-existing) | `set-state-in-effect` in `mounted-only`, `sidebar-user-menu`, `back-to-list-link`, `school-selector`, `schools-directory` — **not introduced by Steps 1–3** |
+| `npm run lint` | Pass (0 errors) | `set-state-in-effect` fixes applied. Remaining: 1 warning — `window.location.assign("/login")` in `sidebar-user-menu` (intentional hard navigation after sign-out) |
 
 Feature-focused unit suites:
 
@@ -79,6 +79,6 @@ Copy outcomes from the living Step 1–3 checklists, or mark here:
 
 | | |
 |--|--|
-| Automated gate | Typecheck + unit tests green (lint pre-existing failures noted) |
+| Automated gate | Typecheck + unit tests green; lint 0 errors (1 logout assign warning) |
 | Manual E2E | _pending — fill Pass? columns above_ |
 | Ready for client demo | _after manual E2E_ |

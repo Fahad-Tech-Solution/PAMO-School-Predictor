@@ -116,17 +116,13 @@ export function useSchoolsRequireGre(
   includeInactive = false,
 ): boolean {
   const idsKey = schoolIds.join("|");
+  // Warm from module cache on first mount only — do not sync-set from peek in an effect.
   const [catalog, setCatalog] = useState<SchoolSearchRow[] | null>(() =>
     peekSchoolCatalog(includeInactive),
   );
 
   useEffect(() => {
     let cancelled = false;
-
-    const peeked = peekSchoolCatalog(includeInactive);
-    if (peeked) {
-      setCatalog(peeked);
-    }
 
     void loadCatalog(includeInactive)
       .then((rows) => {
@@ -155,10 +151,11 @@ export function useSchoolsRequireGre(
   }, [includeInactive]);
 
   return useMemo(() => {
-    if (!catalog || schoolIds.length === 0) return false;
+    const ids = idsKey ? idsKey.split("|") : [];
+    if (!catalog || ids.length === 0) return false;
     const byId = new Map(catalog.map((row) => [row.id, row]));
-    return schoolIds.some((id) => byId.get(id)?.requiresGre === true);
-  }, [catalog, idsKey, schoolIds]);
+    return ids.some((id) => byId.get(id)?.requiresGre === true);
+  }, [catalog, idsKey]);
 }
 
 function filterSchools(
@@ -283,10 +280,11 @@ export function SchoolSelector(props: SchoolSelectorProps) {
 
   // Merge catalog rows for selected ids during render (no sync setState in effect).
   const resolvedMeta = useMemo(() => {
-    if (!catalog || selectedIds.length === 0) return selectedMeta;
+    const ids = selectedIdsKey ? selectedIdsKey.split("|") : [];
+    if (!catalog || ids.length === 0) return selectedMeta;
     let changed = false;
     const next = { ...selectedMeta };
-    for (const id of selectedIds) {
+    for (const id of ids) {
       if (next[id]) continue;
       const row = catalog.find((school) => school.id === id);
       if (row) {
@@ -295,7 +293,7 @@ export function SchoolSelector(props: SchoolSelectorProps) {
       }
     }
     return changed ? next : selectedMeta;
-  }, [catalog, selectedIds, selectedIdsKey, selectedMeta]);
+  }, [catalog, selectedIdsKey, selectedMeta]);
 
   const displaySingleLabel =
     singleLabel ??
