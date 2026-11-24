@@ -5,7 +5,7 @@ import { AddApplicationForm } from "@/components/applications/add-application-fo
 import { ApplicantHomeStateForm } from "@/components/applications/applicant-home-state-form";
 import { BackToApplicationsLink } from "@/components/applications/back-to-applications-link";
 import { buttonVariants } from "@/components/ui/button";
-import { formatApplicantLabel } from "@/lib/applicants/name";
+import { formatApplicantName } from "@/lib/applicants/name";
 import { residencyLabel } from "@/lib/applications/residency";
 import { statusLabel } from "@/lib/applications/status";
 import { getApplicantById } from "@/lib/applications/queries";
@@ -26,10 +26,7 @@ export async function ApplicantDetailContent({ id, isAdmin }: Props) {
 
   const { applicant, applications } = data;
   const homeStateLabel = getStateLabel(applicant.homeState);
-  const displayName = formatApplicantLabel({
-    ...applicant,
-    homeStateLabel,
-  });
+  const displayName = formatApplicantName(applicant);
 
   return (
     <div className="space-y-6">
@@ -37,7 +34,7 @@ export async function ApplicantDetailContent({ id, isAdmin }: Props) {
         <div>
           <BackToApplicationsLink />
           <h2 className="mt-2 text-lg font-semibold text-primary">
-            {displayName}
+            {displayName ?? "Applicant"}
           </h2>
           <p className="mt-1 text-sm text-muted-foreground">
             Home state: {homeStateLabel} · {applications.length} application
@@ -109,7 +106,9 @@ export async function ApplicantDetailContent({ id, isAdmin }: Props) {
 
       {isAdmin ? (
         <div className="rounded-lg border border-border bg-white p-4">
-          <h3 className="mb-1 text-sm font-semibold">Edit applicant</h3>
+          <h3 className="mb-1 text-sm font-semibold">
+            Edit applicant details
+          </h3>
           <p className="mb-4 text-sm text-muted-foreground">
             Name and home state apply to every school listed above.
           </p>
@@ -120,7 +119,7 @@ export async function ApplicantDetailContent({ id, isAdmin }: Props) {
           <dl className="grid gap-3 sm:grid-cols-2">
             <div>
               <dt className="text-muted-foreground">Name</dt>
-              <dd className="font-medium">{displayName}</dd>
+              <dd className="font-medium">{displayName ?? "—"}</dd>
             </div>
             <div>
               <dt className="text-muted-foreground">Home state</dt>

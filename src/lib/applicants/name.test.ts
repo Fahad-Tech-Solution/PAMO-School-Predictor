@@ -24,14 +24,14 @@ describe("formatApplicantName", () => {
 });
 
 describe("formatApplicantLabel", () => {
-  it("falls back to Unnamed · home state when name is missing", () => {
+  it("falls back to home state when name is missing", () => {
     expect(
       formatApplicantLabel({
         lastName: null,
         firstName: null,
         homeStateLabel: "California",
       }),
-    ).toBe("Unnamed · California");
+    ).toBe("California");
   });
 
   it("prefers the formatted name when present", () => {

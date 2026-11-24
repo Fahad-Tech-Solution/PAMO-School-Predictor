@@ -12,16 +12,12 @@ export function formatApplicantName(options: {
   return null;
 }
 
-/**
- * List/detail label for admin lookup.
- * Blank names show as "Unnamed · {home state}" so the link is clearly a person record.
- */
+/** Label with home-state fallback when name is blank (detail links). */
 export function formatApplicantLabel(options: {
   lastName?: string | null;
   firstName?: string | null;
   homeStateLabel: string;
 }): string {
   const name = formatApplicantName(options);
-  if (name) return name;
-  return `Unnamed · ${options.homeStateLabel}`;
+  return name ?? options.homeStateLabel;
 }

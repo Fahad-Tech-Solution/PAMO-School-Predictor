@@ -8,7 +8,7 @@ import {
   schoolStatusIcon,
 } from "@/components/dashboard/activity-list-card";
 import { buttonVariants } from "@/components/ui/button";
-import { formatApplicantLabel } from "@/lib/applicants/name";
+import { formatApplicantName } from "@/lib/applicants/name";
 import { residencyLabel } from "@/lib/applications/residency";
 import type {
   DashboardCounts,
@@ -114,12 +114,11 @@ export function DashboardOverview({
                 iconClassName={icon.className}
                 title={row.schoolName}
                 subtitle={[
-                  formatApplicantLabel({
-                    ...row,
-                    homeStateLabel: getStateLabel(row.homeState),
-                  }),
+                  formatApplicantName(row),
                   getStateLabel(row.schoolState),
-                ].join(" · ")}
+                ]
+                  .filter(Boolean)
+                  .join(" · ")}
                 when={formatActivityWhen(row.createdAt)}
                 primaryRight={row.statusLabel}
                 primaryRightClassName={

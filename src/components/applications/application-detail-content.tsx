@@ -182,7 +182,7 @@ export async function ApplicationDetailContent({ id, isAdmin }: Props) {
           <div className="space-y-3 rounded-lg border border-border bg-white p-4">
             <div>
               <h3 className="text-base font-semibold text-primary">
-                Edit applicant
+                Edit applicant details
               </h3>
               <p className="mt-0.5 text-sm text-muted-foreground">
                 Name and home state are shared across every school application
