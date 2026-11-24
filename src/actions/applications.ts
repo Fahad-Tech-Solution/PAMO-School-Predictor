@@ -409,8 +409,11 @@ export async function updateApplicantHomeState(
     return fail("Applicant not found.");
   }
 
-  const linkedSchools = await db
-    .select({ schoolId: applications.schoolId })
+  const linkedApps = await db
+    .select({
+      id: applications.id,
+      schoolId: applications.schoolId,
+    })
     .from(applications)
     .where(eq(applications.applicantId, applicantId));
 
@@ -425,7 +428,7 @@ export async function updateApplicantHomeState(
     .where(eq(applicants.id, applicantId))
     .returning();
 
-  const schoolIds = linkedSchools.map((row) => row.schoolId);
+  const schoolIds = [...new Set(linkedApps.map((row) => row.schoolId))];
 
   after(async () => {
     await writeAuditLog({
@@ -442,6 +445,9 @@ export async function updateApplicantHomeState(
     revalidatePath("/applications");
     revalidatePath("/dashboard");
     revalidatePath(`/applicants/${applicantId}`);
+    for (const app of linkedApps) {
+      revalidatePath(`/applications/${app.id}`);
+    }
     for (const schoolId of schoolIds) {
       revalidatePath(`/schools/${schoolId}`);
     }

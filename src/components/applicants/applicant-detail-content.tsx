@@ -5,7 +5,7 @@ import { AddApplicationForm } from "@/components/applications/add-application-fo
 import { ApplicantHomeStateForm } from "@/components/applications/applicant-home-state-form";
 import { BackToApplicationsLink } from "@/components/applications/back-to-applications-link";
 import { buttonVariants } from "@/components/ui/button";
-import { formatApplicantName } from "@/lib/applicants/name";
+import { formatApplicantLabel } from "@/lib/applicants/name";
 import { residencyLabel } from "@/lib/applications/residency";
 import { statusLabel } from "@/lib/applications/status";
 import { getApplicantById } from "@/lib/applications/queries";
@@ -25,7 +25,11 @@ export async function ApplicantDetailContent({ id, isAdmin }: Props) {
   }
 
   const { applicant, applications } = data;
-  const displayName = formatApplicantName(applicant);
+  const homeStateLabel = getStateLabel(applicant.homeState);
+  const displayName = formatApplicantLabel({
+    ...applicant,
+    homeStateLabel,
+  });
 
   return (
     <div className="space-y-6">
@@ -33,40 +37,21 @@ export async function ApplicantDetailContent({ id, isAdmin }: Props) {
         <div>
           <BackToApplicationsLink />
           <h2 className="mt-2 text-lg font-semibold text-primary">
-            {displayName ?? "Applicant"}
+            {displayName}
           </h2>
           <p className="mt-1 text-sm text-muted-foreground">
-            Home state: {getStateLabel(applicant.homeState)} ·{" "}
-            {applications.length} application
+            Home state: {homeStateLabel} · {applications.length} application
             {applications.length === 1 ? "" : "s"}
           </p>
         </div>
       </div>
 
-      {isAdmin ? (
-        <div className="rounded-lg border border-border bg-white p-4">
-          <h3 className="mb-4 text-sm font-semibold">Edit applicant</h3>
-          <ApplicantHomeStateForm applicant={applicant} />
-        </div>
-      ) : (
-        <div className="rounded-lg border border-border bg-white p-4 text-sm">
-          <dl className="grid gap-3 sm:grid-cols-2">
-            <div>
-              <dt className="text-muted-foreground">Name</dt>
-              <dd className="font-medium">{displayName ?? "—"}</dd>
-            </div>
-            <div>
-              <dt className="text-muted-foreground">Home state</dt>
-              <dd className="font-medium">
-                {getStateLabel(applicant.homeState)}
-              </dd>
-            </div>
-          </dl>
-        </div>
-      )}
-
       <div className="space-y-3">
         <h3 className="text-sm font-semibold">Applications</h3>
+        <p className="text-sm text-muted-foreground">
+          Open a school to edit that application’s academics, outcome, and
+          dates.
+        </p>
         <div className="overflow-x-auto rounded-lg border border-border bg-white">
           <table className="w-full min-w-[640px] text-left text-sm">
             <thead className="border-b border-border bg-muted/40 text-xs uppercase tracking-wide text-muted-foreground">
@@ -124,11 +109,40 @@ export async function ApplicantDetailContent({ id, isAdmin }: Props) {
 
       {isAdmin ? (
         <div className="rounded-lg border border-border bg-white p-4">
-          <h3 className="mb-4 text-sm font-semibold">
-            Add another application
-          </h3>
-          <AddApplicationForm applicantId={applicant.id} />
+          <h3 className="mb-1 text-sm font-semibold">Edit applicant</h3>
+          <p className="mb-4 text-sm text-muted-foreground">
+            Name and home state apply to every school listed above.
+          </p>
+          <ApplicantHomeStateForm applicant={applicant} />
         </div>
+      ) : (
+        <div className="rounded-lg border border-border bg-white p-4 text-sm">
+          <dl className="grid gap-3 sm:grid-cols-2">
+            <div>
+              <dt className="text-muted-foreground">Name</dt>
+              <dd className="font-medium">{displayName}</dd>
+            </div>
+            <div>
+              <dt className="text-muted-foreground">Home state</dt>
+              <dd className="font-medium">{homeStateLabel}</dd>
+            </div>
+          </dl>
+        </div>
+      )}
+
+      {isAdmin ? (
+        <details className="rounded-lg border border-border bg-white p-4">
+          <summary className="cursor-pointer text-sm font-semibold text-primary">
+            Add another application to a school
+          </summary>
+          <p className="mt-2 text-sm text-muted-foreground">
+            Creates a new school application for this same applicant — it does
+            not update an existing row.
+          </p>
+          <div className="mt-4">
+            <AddApplicationForm applicantId={applicant.id} />
+          </div>
+        </details>
       ) : null}
     </div>
   );

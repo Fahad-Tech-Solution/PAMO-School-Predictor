@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
+import { ApplicantHomeStateForm } from "@/components/applications/applicant-home-state-form";
 import { ApplicationEditForm } from "@/components/applications/application-edit-form";
 import { BackToApplicationsLink } from "@/components/applications/back-to-applications-link";
 import {
@@ -177,17 +178,32 @@ export async function ApplicationDetailContent({ id, isAdmin }: Props) {
       </Card>
 
       {isAdmin ? (
-        <div className="space-y-3">
-          <div>
-            <h3 className="text-base font-semibold text-primary">
-              Edit application
-            </h3>
-            <p className="mt-0.5 text-sm text-muted-foreground">
-              Update school, academics, attempt, outcome, and timeline dates.
-            </p>
+        <>
+          <div className="space-y-3 rounded-lg border border-border bg-white p-4">
+            <div>
+              <h3 className="text-base font-semibold text-primary">
+                Edit applicant
+              </h3>
+              <p className="mt-0.5 text-sm text-muted-foreground">
+                Name and home state are shared across every school application
+                for this person.
+              </p>
+            </div>
+            <ApplicantHomeStateForm applicant={applicant} />
           </div>
-          <ApplicationEditForm application={application} school={school} />
-        </div>
+
+          <div className="space-y-3">
+            <div>
+              <h3 className="text-base font-semibold text-primary">
+                Edit application
+              </h3>
+              <p className="mt-0.5 text-sm text-muted-foreground">
+                Update school, academics, attempt, outcome, and timeline dates.
+              </p>
+            </div>
+            <ApplicationEditForm application={application} school={school} />
+          </div>
+        </>
       ) : null}
     </div>
   );

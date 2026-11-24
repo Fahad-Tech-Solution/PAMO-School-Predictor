@@ -6,7 +6,7 @@ import { ApplicationPagination } from "@/components/applications/application-pag
 import { RememberApplicationsReturn } from "@/components/applications/remember-applications-return";
 import { buttonVariants } from "@/components/ui/button";
 import { requireAuth } from "@/lib/auth/session";
-import { formatApplicantName } from "@/lib/applicants/name";
+import { formatApplicantLabel } from "@/lib/applicants/name";
 import { residencyLabel } from "@/lib/applications/residency";
 import { statusLabel } from "@/lib/applications/status";
 import { getStateLabel, parseStateParam } from "@/lib/geo/us-states";
@@ -160,7 +160,10 @@ export default async function ApplicationsPage({
             ) : (
               result.items.map(
                 ({ application, applicant, school: s, residency: r }) => {
-                  const name = formatApplicantName(applicant);
+                  const applicantLabel = formatApplicantLabel({
+                    ...applicant,
+                    homeStateLabel: getStateLabel(applicant.homeState),
+                  });
                   return (
                     <tr
                       key={application.id}
@@ -171,7 +174,7 @@ export default async function ApplicationsPage({
                           href={`/applicants/${applicant.id}`}
                           className="font-medium text-primary hover:underline"
                         >
-                          {name ?? "—"}
+                          {applicantLabel}
                         </Link>
                       </td>
                       <td className="px-4 py-3">

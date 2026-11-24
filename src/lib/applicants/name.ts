@@ -12,11 +12,16 @@ export function formatApplicantName(options: {
   return null;
 }
 
+/**
+ * List/detail label for admin lookup.
+ * Blank names show as "Unnamed · {home state}" so the link is clearly a person record.
+ */
 export function formatApplicantLabel(options: {
   lastName?: string | null;
   firstName?: string | null;
   homeStateLabel: string;
 }): string {
   const name = formatApplicantName(options);
-  return name ?? options.homeStateLabel;
+  if (name) return name;
+  return `Unnamed · ${options.homeStateLabel}`;
 }
