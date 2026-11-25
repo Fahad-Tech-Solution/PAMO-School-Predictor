@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-import { parseDateOnlyInput } from "@/lib/applications/dates";
+import { coerceDateOnly } from "@/lib/applications/dates";
 import { US_STATE_CODES } from "@/lib/geo/us-states";
 import { applicantNameFieldsSchema } from "@/lib/validation/applicant";
 
@@ -66,9 +66,9 @@ function optionalGre(value: unknown, ctx: z.RefinementCtx) {
 
 function optionalDateOnly(value: unknown, ctx: z.RefinementCtx) {
   if (value === null || value === undefined) return null;
-  const raw = String(value).trim();
-  if (!raw) return null;
-  const parsed = parseDateOnlyInput(raw);
+  if (typeof value === "string" && !value.trim()) return null;
+
+  const parsed = coerceDateOnly(value);
   if (!parsed) {
     ctx.addIssue({
       code: "custom",

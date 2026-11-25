@@ -455,3 +455,50 @@ export async function updateApplicantHomeState(
 
   return { ok: true, message: "Applicant updated." };
 }
+
+/**
+ * Permanently delete one school application.
+ * Leaves the applicant record in place (they may still have other applications).
+ */
+export async function deleteApplication(
+  applicationId: string,
+): Promise<ApplicationActionState> {
+  const admin = await requireAdmin();
+  const db = createDb();
+
+  const [existing] = await db
+    .select()
+    .from(applications)
+    .where(eq(applications.id, applicationId))
+    .limit(1);
+
+  if (!existing) {
+    return fail("Application not found.");
+  }
+
+  await db.delete(applications).where(eq(applications.id, applicationId));
+
+  const applicantId = existing.applicantId;
+  const schoolId = existing.schoolId;
+
+  after(async () => {
+    await writeAuditLog({
+      userId: admin.id,
+      action: "DELETE APPLICATION",
+      entityType: "application",
+      entityId: applicationId,
+      oldValues: existing,
+      newValues: null,
+    });
+    await invalidateSchoolStatsCache(schoolId);
+    await invalidateDashboardCountsCache();
+    await invalidateApplicationListCountsCache();
+    revalidatePath("/applications");
+    revalidatePath("/dashboard");
+    revalidatePath(`/applications/${applicationId}`);
+    revalidatePath(`/applicants/${applicantId}`);
+    revalidatePath(`/schools/${schoolId}`);
+  });
+
+  redirect("/applications");
+}

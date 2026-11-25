@@ -12,6 +12,7 @@ import {
 } from "react-hook-form";
 
 import { getSchoolsByIdsAction } from "@/actions/schools";
+import { formatDateInput } from "@/lib/applications/dates";
 import {
   GRE_SCORE_MAX,
   GRE_SCORE_MIN,
@@ -577,28 +578,37 @@ function DateField<T extends FieldValues>({
     <FormField
       control={control}
       name={name}
-      render={({ field }) => (
-        <FormItem>
-          <FormLabel>{label}</FormLabel>
-          <FormControl>
-            <Input
-              type="date"
-              value={
-                field.value === null || field.value === undefined
-                  ? ""
-                  : String(field.value)
-              }
-              onChange={field.onChange}
-              onBlur={field.onBlur}
-              name={field.name}
-            />
-          </FormControl>
-          {description ? (
-            <FormDescription>{description}</FormDescription>
-          ) : null}
-          <FormMessage />
-        </FormItem>
-      )}
+      render={({ field }) => {
+        const raw = field.value as unknown;
+        const displayValue =
+          raw === null || raw === undefined
+            ? ""
+            : raw instanceof Date
+              ? formatDateInput(raw)
+              : String(raw);
+
+        return (
+          <FormItem>
+            <FormLabel>{label}</FormLabel>
+            <FormControl>
+              <Input
+                type="text"
+                inputMode="numeric"
+                placeholder="mm/dd/yyyy"
+                autoComplete="off"
+                value={displayValue}
+                onChange={field.onChange}
+                onBlur={field.onBlur}
+                name={field.name}
+              />
+            </FormControl>
+            {description ? (
+              <FormDescription>{description}</FormDescription>
+            ) : null}
+            <FormMessage />
+          </FormItem>
+        );
+      }}
     />
   );
 }
@@ -614,25 +624,25 @@ function TimelineFields<T extends FieldValues>({
         control={control}
         name={"interviewAt" as Path<T>}
         label="Interview date"
-        description="Optional. Day of the interview for this school cycle."
+        description="Optional. Day of the interview (mm/dd/yyyy)."
       />
       <DateField
         control={control}
         name={"resultsAt" as Path<T>}
         label="Results date"
-        description="Optional. When the school communicated this cycle’s outcome (separate from waitlist/accepted stamps)."
+        description="Optional. When results were communicated (mm/dd/yyyy). Separate from waitlist/accepted stamps."
       />
       <DateField
         control={control}
         name={"waitlistedAt" as Path<T>}
         label="Waitlisted date"
-        description="Optional. Auto-fills when status becomes Waitlisted if left blank."
+        description="Optional (mm/dd/yyyy). Auto-fills when status becomes Waitlisted if left blank."
       />
       <DateField
         control={control}
         name={"acceptedAt" as Path<T>}
         label="Accepted date"
-        description="Optional. Auto-fills when status becomes Accepted if left blank."
+        description="Optional (mm/dd/yyyy). Auto-fills when status becomes Accepted if left blank."
       />
     </div>
   );

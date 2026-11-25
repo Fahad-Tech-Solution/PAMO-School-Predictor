@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 
 import { ApplicantHomeStateForm } from "@/components/applications/applicant-home-state-form";
+import { ApplicationDeleteButton } from "@/components/applications/application-delete-button";
 import { ApplicationEditForm } from "@/components/applications/application-edit-form";
 import { BackToApplicationsLink } from "@/components/applications/back-to-applications-link";
 import {
@@ -203,6 +204,11 @@ export async function ApplicationDetailContent({ id, isAdmin }: Props) {
             </div>
             <ApplicationEditForm application={application} school={school} />
           </div>
+
+          <ApplicationDeleteButton
+            applicationId={application.id}
+            schoolName={school.name}
+          />
         </>
       ) : null}
     </div>

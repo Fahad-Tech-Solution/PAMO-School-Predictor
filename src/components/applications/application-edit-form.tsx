@@ -15,6 +15,7 @@ import { Form } from "@/components/ui/form";
 import type { Application, School } from "@/db/schema";
 import { formatDateInput } from "@/lib/applications/dates";
 import { statusToFormValue } from "@/lib/applications/status";
+import { applyFieldErrors } from "@/lib/forms/apply-field-errors";
 import { getStateLabel } from "@/lib/geo/us-states";
 import {
   updateApplicationSchema,
@@ -32,6 +33,7 @@ export function ApplicationEditForm({
   const [serverState, setServerState] = useState<ApplicationActionState | null>(
     null,
   );
+  const [serverFieldMessages, setServerFieldMessages] = useState<string[]>([]);
 
   const form = useForm<ApplicationFieldsValues>({
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -54,9 +56,16 @@ export function ApplicationEditForm({
 
   function onSubmit(values: ApplicationFieldsValues) {
     setServerState(null);
+    setServerFieldMessages([]);
+    form.clearErrors();
     startTransition(async () => {
       const result = await updateApplication(application.id, values);
       setServerState(result);
+      if (!result.ok) {
+        setServerFieldMessages(
+          applyFieldErrors(form.setError, result.fieldErrors),
+        );
+      }
     });
   }
 
@@ -87,7 +96,16 @@ export function ApplicationEditForm({
             <AlertTitle>
               {serverState.ok ? "Saved" : "Unable to save"}
             </AlertTitle>
-            <AlertDescription>{serverState.message}</AlertDescription>
+            <AlertDescription>
+              <p>{serverState.message}</p>
+              {!serverState.ok && serverFieldMessages.length > 0 ? (
+                <ul className="mt-2 list-disc space-y-1 pl-4">
+                  {serverFieldMessages.map((message) => (
+                    <li key={message}>{message}</li>
+                  ))}
+                </ul>
+              ) : null}
+            </AlertDescription>
           </Alert>
         ) : null}
 

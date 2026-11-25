@@ -78,10 +78,10 @@ describe("applicationFieldsSchema", () => {
       scienceGpa: "",
       pceHours: "",
       greScore: "",
-      interviewAt: "2025-10-19",
-      resultsAt: "2025-10-30",
-      waitlistedAt: "2025-10-30",
-      acceptedAt: "2026-08-13",
+      interviewAt: "10/19/2025",
+      resultsAt: "10/30/2025",
+      waitlistedAt: "10/30/2025",
+      acceptedAt: "08/13/2026",
       applicationAttempt: 1,
       status: "ACCEPTED",
     });
@@ -102,14 +102,43 @@ describe("applicationFieldsSchema", () => {
       scienceGpa: "",
       pceHours: "",
       greScore: "",
-      interviewAt: "2025-10-30",
-      resultsAt: "2025-10-19",
+      interviewAt: "10/30/2025",
+      resultsAt: "10/19/2025",
       waitlistedAt: "",
       acceptedAt: "",
       applicationAttempt: 1,
       status: "UNKNOWN",
     });
     expect(inverted.success).toBe(false);
+  });
+
+  it("accepts Date instances from server-action Flight payloads", () => {
+    const ok = applicationFieldsSchema.safeParse({
+      schoolId,
+      bcpGpa: "3.54",
+      overallGpa: "3.64",
+      scienceGpa: "3.57",
+      pceHours: 2034,
+      greScore: 297,
+      interviewAt: new Date("2026-06-30T12:00:00.000Z"),
+      resultsAt: null,
+      waitlistedAt: new Date("2026-08-28T12:00:00.000Z"),
+      acceptedAt: new Date("2026-11-23T12:00:00.000Z"),
+      applicationAttempt: 1,
+      status: "ACCEPTED",
+    });
+    expect(ok.success).toBe(true);
+    if (ok.success) {
+      expect(ok.data.interviewAt?.toISOString()).toBe(
+        "2026-06-30T12:00:00.000Z",
+      );
+      expect(ok.data.waitlistedAt?.toISOString()).toBe(
+        "2026-08-28T12:00:00.000Z",
+      );
+      expect(ok.data.acceptedAt?.toISOString()).toBe(
+        "2026-11-23T12:00:00.000Z",
+      );
+    }
   });
 });
 
